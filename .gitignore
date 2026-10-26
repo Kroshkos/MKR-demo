@@ -4,3 +4,10 @@ client/dist/
 server/data/
 /data/
 .env
+
+# curl cookie artifacts from e2e tests
+c1.txt
+cA.txt
+cL.txt
+cV.txt
+*.cookie

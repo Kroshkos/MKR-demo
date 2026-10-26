@@ -18,6 +18,11 @@ module.exports = function (db) {
                              WHERE u.role='verifier' AND d.blockCodes LIKE ?`).all(`%${blockCode}%`);
     for (const v of rows) notify(v.id, ...args);
   };
+  // Личное дело: руководство факультета получает уведомление о каждом закреплённом за курсантом событии
+  const notifyLeadership = (...args) => {
+    const rows = db.prepare("SELECT id FROM users WHERE role IN ('leadership','owner')").all();
+    for (const u of rows) notify(u.id, ...args);
+  };
 
   r.get('/notifications', auth, (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
@@ -45,6 +50,8 @@ module.exports = function (db) {
       : db.prepare('SELECT * FROM catalog').all();
     res.json(rows);
   });
+
+  const memberName = (uid) => db.prepare('SELECT fullName FROM users WHERE id=?').get(uid)?.fullName || `участник №${uid}`;
 
   r.get('/levels', auth, (req, res) => res.json({ levels: LEVELS, statuses: STATUSES }));
 
@@ -108,8 +115,15 @@ module.exports = function (db) {
         .run(req.user.id, catalogId, cat.blockCode, level, status, profileMpmk ?? cat.defaultProfile,
              kp ?? cat.defaultKp, isTeam ? 1 : 0, eventDate, docName ? String(docName).slice(0, 200) : null, docUrl || null, score, st);
       audit(db, req.user.login, 'achievement.create', 'achievement', i.lastInsertRowid, { level, status, score, st });
-      if (submit) notifyVerifiersOfBlock(cat.blockCode, 'verify.new', 'Новая заявка на верификацию',
-        `${req.user.fullName}: «${cat.name}» (~${score} б.)`, '#/verify');
+      if (submit) {
+        notifyVerifiersOfBlock(cat.blockCode, 'verify.new', 'Новая заявка на верификацию',
+          `${memberName(req.user.id)}: «${cat.name}» (~${score} б.)`, '#/verify');
+        const KINDL = { gratitude: 'Благодарность', discipline: 'Взыскание', event_participation: 'Участие в мероприятии' };
+        const kind = cat.isThesis ? null : (['межд', 'всеросс', 'регион'].includes(level) ? 'event_participation'
+          : status === 'победитель' || status === 'призёр' ? 'gratitude' : null);
+        if (kind) notifyLeadership('record', `Личное дело: ${KINDL[kind]} (авто)`,
+          `№${req.user.id}: «${cat.name}» — ${level}/${status}`, '#/mkr/rating');
+      }
       return i.lastInsertRowid;
     });
     res.status(201).json({ id: tx() });
@@ -123,7 +137,7 @@ module.exports = function (db) {
     db.prepare("UPDATE achievements SET verifyState='submitted', updatedAt=datetime('now') WHERE id=?").run(a.id);
     audit(db, req.user.login, 'achievement.submit', 'achievement', a.id);
     notifyVerifiersOfBlock(a.blockCode, 'verify.new', 'Новая заявка на верификацию',
-      `${req.user.fullName}: «${db.prepare('SELECT name FROM catalog WHERE id=?').get(a.catalogId)?.name}» (~${a.computedScore} б.)`, '#/verify');
+      `${memberName(req.user.id)}: «${db.prepare('SELECT name FROM catalog WHERE id=?').get(a.catalogId)?.name}» (~${a.computedScore} б.)`, '#/verify');
     res.json({ ok: true });
   });
 
