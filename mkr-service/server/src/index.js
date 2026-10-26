@@ -21,7 +21,10 @@ app.get('/api/health', (req, res) => res.json({ ok: true, service: 'МКР.ВМ�
 // Статика собранного клиента (SPA)
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
 app.use(express.static(clientDist));
-app.get(/^\/(?!api).*/, (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+app.get('/{*splat}', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
 
 // Обработчик ошибок
 app.use((err, req, res, next) => {

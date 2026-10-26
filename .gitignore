@@ -1,7 +1,2 @@
-node_modules/
-*.log
-.env
-.env.local
-.env.*.local
-build/
-dist/
+*.db-shm
+*.db-wal

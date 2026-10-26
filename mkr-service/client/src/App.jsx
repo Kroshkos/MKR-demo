@@ -1,122 +1,68 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { AuthProvider, useAuth } from './auth.jsx';
+import { Layout } from './ui.jsx';
+import Login from './pages/Login.jsx';
+import MyAchievements from './pages/MyAchievements.jsx';
+import MyPassport from './pages/MyPassport.jsx';
+import VerifyQueue from './pages/VerifyQueue.jsx';
+import MkrDashboard from './pages/MkrDashboard.jsx';
+import MkrRating from './pages/MkrRating.jsx';
+import Admin from './pages/Admin.jsx';
+import AuditLog from './pages/AuditLog.jsx';
+import './styles.css';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+// Мини-роутер на hash — без внешних зависимостей
+function useHashRoute() {
+  const [route, setRoute] = useState(location.hash.slice(1) || '/');
+  useEffect(() => {
+    const onHash = () => setRoute(location.hash.slice(1) || '/');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  return route;
 }
 
-export default App
+const HOME = { member: '/me', verifier: '/verify', mkr_admin: '/mkr', leadership: '/mkr', owner: '/mkr', sysadmin: '/admin' };
+const ALLOWED = {
+  member: ['/me', '/me/passport'],
+  verifier: ['/verify'],
+  mkr_admin: ['/mkr', '/mkr/rating'],
+  leadership: ['/mkr', '/mkr/rating'],
+  sysadmin: ['/admin', '/admin/audit'],
+  owner: ['/mkr', '/mkr/rating', '/admin', '/admin/audit'],
+};
+
+function Shell() {
+  const { user } = useAuth();
+  const route = useHashRoute();
+
+  useEffect(() => {
+    if (!user) return;
+    const home = HOME[user.role] || '/';
+    if (route === '/' || !(ALLOWED[user.role] || []).includes(route)) location.hash = home;
+  }, [user, route]);
+
+  if (user === undefined) return <p className="muted center">Загрузка…</p>;
+  if (user === null) return <Login />;
+
+  const pages = {
+    '/me': <MyAchievements />,
+    '/me/passport': <MyPassport />,
+    '/verify': <VerifyQueue />,
+    '/mkr': <MkrDashboard />,
+    '/mkr/rating': <MkrRating role={user.role} />,
+    '/admin': <Admin />,
+    '/admin/audit': <AuditLog />,
+  };
+  const page = pages[route] || (HOME[user.role] === '/me' ? <MyAchievements /> : null);
+  if (!page) return null;
+  return <Layout>{page}</Layout>;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
+  );
+}
