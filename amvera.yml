@@ -7,17 +7,16 @@ meta:
     version: "20"        # образ node:20 (node-gyp собирает better-sqlite3 из исходников)
 
 build:
-  # Клиент — самостоятельный npm-проект в client/: ставим его зависимости и собираем SPA в client/dist
-  additionalCommands:
-    - npm --prefix client install --no-audit --no-fund
-    - npm run build
+  additionalCommands: []  # сборка выполняется автоматически на этапе npm install (см. postinstall в package.json):
+                          # ставит зависимости client/, собирает SPA в client/dist и делает npm prune --omit=dev.
+                          # Держим список пустым, а не с командами, чтобы ошибка сборки не оставила «мёртвый» запуск.
 
 run:
-  command: npm run start
-  containerPort: 3001      # сервер слушает process.env.PORT || 3001; Amvera передаёт PORT в контейнер
-  persistenceMount: /data  # постоянное хранилище: при NODE_ENV=production БД лежит в /data/mkr.db и переживает перезапуск
+  command: node server/src/index.js   # запускаем напрямую: без прослоек npm/node, у процесса корректный PID1
+  containerPort: 3001                 # сервер слушает process.env.PORT || 3001; Amvera передаёт PORT в контейнер
+  persistenceMount: /data             # постоянное хранилище: при NODE_ENV=production БД лежит в /data/mkr.db
 
 env:
-  NODE_ENV: production     # включает хранение БД в /data и Secure-cookie за HTTPS-прокси Amvera
-  # JWT_SECRET задайте в панели Amvera: «Конфигурация → Переменные» (тип «секрет») — не хранится в репозитории.
-  # SEED_DEMO=false — создать приложение без демо-пользователей (только справочники ТЗ). По умолчанию демо включены.
+  NODE_ENV: production                # хранение БД в /data + Secure-cookie за HTTPS-прокси Amvera
+  JWT_SECRET: change-me-in-amvera     # ОБЯЗАТЕЛЬНО задайте свой секрет в панели: «Конфигурация → Переменные» (тип «секрет»)
+  # SEED_DEMO=false — приложение без демо-пользователей (только справочники ТЗ). По умолчанию демо включены.
