@@ -55,7 +55,7 @@ export default function VerifyQueue() {
             {shown.map(a => (
               <tr key={a.id}>
                 <td>{a.applicant}</td>
-                <td>{a.catalogName}<br /><small className="muted">{a.eventDate} · {a.docUrl ? <a href={a.docUrl} target="_blank" rel="noreferrer">документ ↗</a> : 'без документа'}</small></td>
+                <td>{a.catalogName}<br /><small className="muted">{a.eventDate} · {a.docUrl ? <a href={a.docUrl} target="_blank" rel="noreferrer">📎 {a.docName || 'документ'} ↗</a> : (a.docName ? `📄 ${a.docName}` : 'без документа')}</small></td>
                 <td>{a.blockName}</td>
                 <td>{a.level} / {a.status} · Кп {a.kp}{a.isTeam ? ' · 👥' : ''}</td>
                 <td><b>{a.computedScore}</b></td>

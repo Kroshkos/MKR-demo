@@ -13,6 +13,11 @@ module.exports = function (db) {
     db.prepare('INSERT INTO notifications (userId, kind, type, title, body, link) VALUES (?,?,?,?,?,?)')
       .run(userId, kind, type, title, body || null, link || null);
   };
+  // Уведомления руководству факультета (оно ведёт личные дела): все активные leadership/owner
+  const notifyLeadership = (...args) => {
+    const rows = db.prepare("SELECT id FROM users WHERE role IN ('leadership','owner')").all();
+    for (const u of rows) notify(u.id, ...args);
+  };
   const READ = requireRole('mkr_admin', 'leadership', 'owner');
   const WRITE = requireRole('mkr_admin', 'owner');
 
@@ -92,6 +97,8 @@ module.exports = function (db) {
     const info = db.prepare('INSERT INTO personal_records (userId, kind, title, body, eventDate, authorId) VALUES (?,?,?,?,?,?)')
       .run(uid, kind, String(title).slice(0, 200), body ? String(body).slice(0, 4000) : null, eventDate || null, req.user.id);
     audit(db, req.user.login, 'record.add', 'personal_records', info.lastInsertRowid, { userId: uid, kind });
+    const KIND_LABEL = { characteristic: 'Характеристика', gratitude: 'Благодарность', discipline: 'Взыскание', event_participation: 'Участие в мероприятии' };
+    notifyLeadership('record', `Личное дело №${uid}: ${KIND_LABEL[kind]}`, `${title} (${eventDate || 'без даты'})`, '#/mkr/rating');
     res.json({ ok: true, id: info.lastInsertRowid });
   });
 

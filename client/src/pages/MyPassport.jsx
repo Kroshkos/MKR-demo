@@ -148,10 +148,13 @@ function PersonalFile({ records, canEdit, userId }) {
   const del = async (id) => {
     try { await api.del(`/api/mkr/records/${userId}/${id}`); await reload(); } catch (e) { setMsg(e.message); }
   };
+  const saveEdit = async (rec) => {
+    try { await api.put(`/api/mkr/records/${userId}/${rec.id}`, rec); await reload(); } catch (e) { setMsg(e.message); }
+  };
 
   return (
-    <div className="card wide" style={{ marginTop: 14 }}>
-      <h3>Личное дело</h3>
+    <div className="card wide" style={{ marginTop: 14 }} >
+      <h3>Личное дело <small className="muted">· заполняет руководство факультета</small></h3>
       {!canEdit && !local?.length && <p className="muted">Разделы личного дела пока не заполнены руководством факультета.</p>}
       {REC_KINDS.map(([kind, label]) => {
         const items = (local || []).filter(x => x.kind === kind);
@@ -160,11 +163,7 @@ function PersonalFile({ records, canEdit, userId }) {
           <div key={kind} className="rec-group">
             <h4>{label}{items.length ? ` (${items.length})` : ''}</h4>
             {items.map(rec => (
-              <div key={rec.id} className="rec-item">
-                <div><b>{rec.title}</b> <small className="muted">{rec.eventDate || ''}{rec.authorName ? ` · внес: ${rec.authorName}` : ''}</small></div>
-                {rec.body && <p className="rec-body">{rec.body}</p>}
-                {canEdit && <button className="btn small ghost" onClick={() => del(rec.id)}>Удалить</button>}
-              </div>
+              <RecItem key={rec.id} rec={rec} canEdit={canEdit} onSave={saveEdit} onDel={() => del(rec.id)} />
             ))}
           </div>
         );
@@ -184,6 +183,38 @@ function PersonalFile({ records, canEdit, userId }) {
           <div className="row"><button className="btn primary" disabled={!form.title.trim()} onClick={add}>Добавить запись</button>{msg && <span className="ok">{msg}</span>}</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Запись личного дела: просмотр + инлайн-редактирование (руководство факультета)
+function RecItem({ rec, canEdit, onSave, onDel }) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState(rec);
+  useEffect(() => { setF(rec); }, [rec]);
+  if (!canEdit || !edit) {
+    return (
+      <div className="rec-item">
+        <div><b>{rec.title}</b> <small className="muted">{rec.eventDate || ''}{rec.authorName ? ` · внес: ${rec.authorName}` : ''}</small></div>
+        {rec.body && <p className="rec-body">{rec.body}</p>}
+        {canEdit && (
+          <span className="row" style={{ gap: 6 }}>
+            <button className="btn small ghost" onClick={() => setEdit(true)}>Изменить</button>
+            <button className="btn small ghost" onClick={onDel}>Удалить</button>
+          </span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="rec-item editing">
+      <input value={f.title} onChange={e => setF({ ...f, title: e.target.value })} />
+      <input type="date" value={f.eventDate || ''} onChange={e => setF({ ...f, eventDate: e.target.value })} />
+      <textarea rows="3" value={f.body || ''} onChange={e => setF({ ...f, body: e.target.value })} />
+      <span className="row" style={{ gap: 6 }}>
+        <button className="btn small primary" disabled={!f.title?.trim()} onClick={() => { onSave(f); setEdit(false); }}>Сохранить</button>
+        <button className="btn small ghost" onClick={() => { setEdit(false); setF(rec); }}>Отмена</button>
+      </span>
     </div>
   );
 }

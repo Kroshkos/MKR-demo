@@ -113,3 +113,13 @@ tr.clickable { cursor:pointer; } tr.clickable:hover td { background:#f4f7fd; }
   border-left: 3px solid #c7d2e3; padding: 6px 10px; margin-bottom: 6px; background: #f8fafc; border-radius: 0 8px 8px 0; }
 .rec-body { margin: 4px 0 0; font-size: 13px; color: #374151; white-space: pre-wrap; }
 .rec-form textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }
+
+/* Личное дело: карточки записей и инлайн-редактирование */
+.rec-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--line, #e3e8f0); border-radius: 10px; margin-bottom: 8px; background: #fbfcfe; }
+.rec-item > div:first-child { flex: 1 1 60%; min-width: 200px; }
+.rec-item .rec-body { flex-basis: 100%; margin: 4px 0 0; white-space: pre-wrap; color: #33405a; font-size: .92em; }
+.rec-item.editing { flex-direction: column; align-items: stretch; background: #fff; border-color: #b9c6e0; }
+.rec-item.editing input, .rec-item.editing textarea { width: 100%; margin-bottom: 6px; }
+.rec-group h4 { margin: 14px 0 8px; font-size: .98em; color: #274b8f; }
+.rec-form { border-top: 1px dashed var(--line, #d7deea); margin-top: 12px; padding-top: 12px; }
+.card.wide { grid-column: 1 / -1; }
