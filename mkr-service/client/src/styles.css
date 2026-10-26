@@ -1,0 +1,83 @@
+/* МКР.ВМедА — стили интерфейса (официальная сине-белая палитра ВМА) */
+* { box-sizing: border-box; }
+:root { --navy:#0f2a52; --blue:#1d4ed8; --bg:#f3f6fb; --line:#dbe3ef; --txt:#1f2937; }
+body { margin:0; font-family:"Segoe UI", Roboto, Arial, sans-serif; background:var(--bg); color:var(--txt); }
+h1,h2,h3 { color:var(--navy); margin:.2em 0; }
+a { color:var(--blue); text-decoration:none; }
+
+.shell { min-height:100vh; display:flex; flex-direction:column; }
+main { flex:1; width:min(1200px, 96vw); margin:0 auto; padding:18px 0 30px; }
+footer { text-align:center; font-size:12px; color:#6b7280; padding:14px; border-top:1px solid var(--line); background:#fff; }
+
+.topbar { background:var(--navy); color:#fff; display:flex; align-items:center; gap:22px; padding:10px 24px; position:sticky; top:0; z-index:10; }
+.topbar nav { display:flex; gap:6px; flex-wrap:wrap; flex:1; }
+.topbar nav a { color:#cdd9ee; padding:7px 12px; border-radius:8px; font-size:14px; }
+.topbar nav a:hover { background:rgba(255,255,255,.12); color:#fff; }
+.brand { font-size:20px; font-weight:800; letter-spacing:.5px; }
+.brand span { color:#8ab4ff; }
+.who { display:flex; align-items:center; gap:12px; font-size:13px; color:#e5edfa; text-align:right; }
+.who small { color:#9db4d8; }
+
+.cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; align-items:start; }
+.card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 1px 3px rgba(15,42,82,.06); }
+.card.wide { grid-column:1/-1; }
+
+label { display:block; font-size:13px; margin:10px 0; color:#374151; }
+input, select, textarea { width:100%; margin-top:4px; padding:8px 10px; border:1px solid #c7d2e3; border-radius:8px; font:inherit; background:#fff; }
+input:focus, select:focus, textarea:focus { outline:2px solid #bfdbfe; border-color:var(--blue); }
+.check { display:flex; align-items:center; gap:8px; } .check input { width:auto; margin:0; }
+.row { display:flex; gap:10px; align-items:end; flex-wrap:wrap; } .row label { flex:1; min-width:120px; }
+.grow { flex:3 !important; }
+
+.btn { border:1px solid var(--blue); background:#fff; color:var(--blue); padding:9px 16px; border-radius:9px; cursor:pointer; font:inherit; font-weight:600; }
+.btn:hover { background:#eff4ff; }
+.btn.primary { background:var(--blue); color:#fff; } .btn.primary:hover { background:#1a46bd; }
+.btn.ghost { border-color:#c7d2e3; color:#374151; }
+.btn.small { padding:5px 10px; font-size:13px; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; color:#5b6b84; font-size:12px; text-transform:uppercase; letter-spacing:.4px; border-bottom:2px solid var(--line); padding:8px 6px; }
+td { padding:9px 6px; border-bottom:1px solid #edf1f7; vertical-align:top; }
+tr.active td { background:#eef4ff; }
+
+.badge { display:inline-block; color:#fff; font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+.muted { color:#6b7280; font-size:13px; } .center { text-align:center; margin-top:60px; }
+.error { background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:8px 12px; border-radius:8px; font-size:13px; margin:8px 0; }
+.ok { background:#ecfdf5; border:1px solid #a7f3d0; color:#0d7a3f; padding:8px 12px; border-radius:8px; font-size:13px; margin:8px 0; }
+.ok.fixed { position:fixed; top:70px; right:24px; z-index:50; box-shadow:0 4px 14px rgba(0,0,0,.15); }
+
+.bar { height:9px; background:#e5eaf3; border-radius:999px; overflow:hidden; flex:1; }
+.bar-fill { height:100%; border-radius:999px; transition:width .4s; }
+
+.login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--navy),#16386b 60%,#1d4ed8); }
+.login { width:420px; } .login h1 span { color:var(--blue); }
+.demo { margin-top:14px; display:flex; flex-wrap:wrap; gap:6px; }
+.chip { border:1px solid #c7d2e3; background:#f8fafc; border-radius:999px; padding:4px 10px; font-size:12px; cursor:pointer; }
+.chip.on, .chip:hover { background:var(--blue); color:#fff; border-color:var(--blue); }
+.chips { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
+
+.passport { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+.summary { text-align:center; }
+.big-score { font-size:44px; font-weight:800; color:var(--navy); margin:6px 0; } .big-score small { font-size:15px; color:#6b7280; font-weight:400; }
+.indices { display:flex; justify-content:space-around; margin-top:14px; }
+.indices div { display:flex; flex-direction:column; } .indices b { font-size:20px; color:var(--blue); } .indices span { font-size:11px; color:#6b7280; max-width:110px; }
+.radar { display:block; margin:0 auto; }
+.legend { list-style:none; padding:0; font-size:12px; color:#4b5563; columns:2; }
+.vec-row { display:flex; align-items:center; gap:10px; margin:7px 0; font-size:13px; }
+.vec-name { width:170px; } .vec-pct { width:90px; text-align:right; color:#4b5563; }
+
+.funnel-row { display:flex; align-items:center; gap:12px; margin:12px 0; } .funnel-row span { width:90px; }
+.counters { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; } .counters h2 { grid-column:1/-1; }
+.counter { background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center; display:flex; flex-direction:column; }
+.counter b { font-size:30px; color:var(--navy); } .counter span { font-size:12px; color:#6b7280; }
+
+.toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.modal-card { position:sticky; top:76px; border-left:4px solid var(--blue); }
+.open-passport { margin-top:16px; border-left:4px solid var(--navy); }
+.ach-list { font-size:13px; line-height:1.7; }
+.decision { border-top:2px dashed var(--line); margin-top:14px; padding-top:6px; }
+.coef { display:flex; justify-content:space-between; align-items:center; gap:10px; } .coef input { width:110px; margin:0; }
+.dep { border-top:1px solid var(--line); padding:10px 0; }
+
+@media (max-width:700px){ .topbar{flex-wrap:wrap} .who{display:none} .passport{grid-template-columns:1fr} }
