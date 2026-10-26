@@ -78,8 +78,12 @@ module.exports = function (db) {
   // ---- Личное дело: CRUD-разделы (заполняет руководство факультета) ----------
   const REC_KINDS = ['characteristic', 'gratitude', 'discipline', 'event_participation'];
 
-  r.get('/records/:userId', auth, READ, (req, res) => {
+  r.get('/records/:userId', auth, (req, res) => {
     const uid = Number(req.params.userId);
+    // Чтение разрешено руководству/админу контура Б, либо самому обучающемуся (своё личное дело).
+    if (!(req.user.role === 'member' ? req.user.id === uid : ['mkr_admin', 'leadership', 'owner'].includes(req.user.role))) {
+      return res.status(403).json({ error: 'Нет доступа к личному делу' });
+    }
     const rows = db.prepare(`SELECT pr.*, au.fullName AS authorName FROM personal_records pr
                              LEFT JOIN users au ON au.id=pr.authorId
                              WHERE pr.userId=? ORDER BY pr.kind, pr.eventDate DESC, pr.id DESC`).all(uid);

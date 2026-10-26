@@ -90,9 +90,12 @@ module.exports = function (db) {
     const planRow = db.prepare('SELECT * FROM development_plans WHERE userId=?').get(req.user.id);
     const plan = planRow ? { goals: JSON.parse(planRow.goals || '[]'), mentor: planRow.mentor, focus: planRow.focus, updatedAt: planRow.updatedAt } : null;
     const reserve = db.prepare('SELECT stage, councilNote, decidedAt FROM reserve WHERE userId=?').get(req.user.id);
+    // Личное дело (read-only для участника): без ФИО автора и служебных полей — только содержание разделов.
+    const records = db.prepare(`SELECT kind, title, body, eventDate, updatedAt FROM personal_records
+                                WHERE userId=? ORDER BY kind, eventDate DESC, id DESC`).all(req.user.id);
     // Анонимизация аккаунта обучающегося: без ФИО и без места прикрепления документов.
     const u = db.prepare('SELECT track, course, profileMpmk FROM users WHERE id=?').get(req.user.id);
-    res.json({ user: u, anon: true, ...p, radar, profileVectorNamed: vector, plan, reserveFixed: reserve || null,
+    res.json({ user: u, anon: true, ...p, radar, profileVectorNamed: vector, plan, records, reserveFixed: reserve || null,
       achievements: items.map(i => ({ name: i.catalogName, block: i.blockCode, level: i.level, status: i.status, score: i.computedScore, date: i.eventDate })) });
   });
 

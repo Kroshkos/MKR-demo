@@ -39,7 +39,7 @@ export function PassportView({ p, canEditPlan, canEditRecordRole, userId }) {
         {!p.profileVector?.length && !p.profileVectorNamed?.length && <p className="muted">Нет зачтённых достижений.</p>}
       </div>
       <PlanCard plan={p.plan} canEdit={canEditPlan} userId={userId} />
-      {p.records !== undefined && <PersonalFile records={p.records} canEdit={canEditRecordRole} userId={userId} />}
+      {p.records !== undefined && <PersonalFile records={p.records} canEdit={canEditRecordRole} userId={userId} anon={userId == null} />}
     </div>
   );
 }
@@ -130,10 +130,11 @@ const REC_KINDS = [
   ['event_participation', '🎖️ Участия в мероприятиях'],
 ];
 
-function PersonalFile({ records, canEdit, userId }) {
+function PersonalFile({ records, canEdit, userId, anon }) {
   const [form, setForm] = useState({ kind: 'characteristic', title: '', body: '', eventDate: new Date().toISOString().slice(0, 10) });
   const [msg, setMsg] = useState('');
-  const reload = () => api.get(`/api/mkr/records/${userId}`).then(setLocal);
+  // reload только для редактирующего режима (в анонимном просмотре участника данные приходят из паспорта)
+  const reload = () => userId != null ? api.get(`/api/mkr/records/${userId}`).then(setLocal) : Promise.resolve();
   const [local, setLocal] = useState(records);
   useEffect(() => { setLocal(records); }, [records]);
 
@@ -154,7 +155,7 @@ function PersonalFile({ records, canEdit, userId }) {
 
   return (
     <div className="card wide" style={{ marginTop: 14 }} >
-      <h3>Личное дело <small className="muted">· заполняет руководство факультета</small></h3>
+      <h3>Личное дело <small className="muted">· {anon ? 'разделы заполняет руководство факультета, записи видны без подписей' : 'заполняет руководство факультета'}</small></h3>
       {!canEdit && !local?.length && <p className="muted">Разделы личного дела пока не заполнены руководством факультета.</p>}
       {REC_KINDS.map(([kind, label]) => {
         const items = (local || []).filter(x => x.kind === kind);
@@ -163,7 +164,7 @@ function PersonalFile({ records, canEdit, userId }) {
           <div key={kind} className="rec-group">
             <h4>{label}{items.length ? ` (${items.length})` : ''}</h4>
             {items.map(rec => (
-              <RecItem key={rec.id} rec={rec} canEdit={canEdit} onSave={saveEdit} onDel={() => del(rec.id)} />
+              <RecItem key={rec.id} rec={rec} canEdit={canEdit} anon={anon} onSave={saveEdit} onDel={() => del(rec.id)} />
             ))}
           </div>
         );
@@ -188,14 +189,14 @@ function PersonalFile({ records, canEdit, userId }) {
 }
 
 // Запись личного дела: просмотр + инлайн-редактирование (руководство факультета)
-function RecItem({ rec, canEdit, onSave, onDel }) {
+function RecItem({ rec, canEdit, anon, onSave, onDel }) {
   const [edit, setEdit] = useState(false);
   const [f, setF] = useState(rec);
   useEffect(() => { setF(rec); }, [rec]);
   if (!canEdit || !edit) {
     return (
       <div className="rec-item">
-        <div><b>{rec.title}</b> <small className="muted">{rec.eventDate || ''}{rec.authorName ? ` · внес: ${rec.authorName}` : ''}</small></div>
+        <div><b>{rec.title}</b> <small className="muted">{rec.eventDate || ''}{!anon && rec.authorName ? ` · внес: ${rec.authorName}` : ''}</small></div>
         {rec.body && <p className="rec-body">{rec.body}</p>}
         {canEdit && (
           <span className="row" style={{ gap: 6 }}>
