@@ -1,0 +1,22 @@
+# Конфигурация деплоя на Amvera Cloud (https://docs.amvera.ru)
+# Проект: МКР.ВМедА — Express + SQLite (better-sqlite3), SPA-клиент (React/Vite).
+meta:
+  environment: node
+  toolchain:
+    name: npm
+    version: "20"        # образ node:20 (node-gyp собирает better-sqlite3 из исходников)
+
+build:
+  additionalCommands: []  # сборка выполняется автоматически на этапе npm install (см. postinstall в package.json):
+                          # ставит зависимости client/, собирает SPA в client/dist и делает npm prune --omit=dev.
+                          # Держим список пустым, а не с командами, чтобы ошибка сборки не оставила «мёртвый» запуск.
+
+run:
+  command: node server/src/index.js   # запускаем напрямую: без прослоек npm/node, у процесса корректный PID1
+  containerPort: 3001                 # сервер слушает process.env.PORT || 3001; Amvera передаёт PORT в контейнер
+  persistenceMount: /data             # постоянное хранилище: при NODE_ENV=production БД лежит в /data/mkr.db
+
+env:
+  NODE_ENV: production                # хранение БД в /data + Secure-cookie за HTTPS-прокси Amvera
+  JWT_SECRET: change-me-in-amvera     # ОБЯЗАТЕЛЬНО задайте свой секрет в панели: «Конфигурация → Переменные» (тип «секрет»)
+  # SEED_DEMO=false — приложение без демо-пользователей (только справочники ТЗ). По умолчанию демо включены.

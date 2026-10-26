@@ -1,0 +1,17 @@
+# МКР.ВМедА — информационная система Молодёжного кадрового резерва
+
+Полноценный сервис по ТЗ (два контура: А «Рейтинг + верификация», Б закрытый «МКР»).
+
+## Запуск
+    cd mkr-service
+    npm install && npm test     # автотесты ядра расчёта
+    npm run build               # сборка React-клиента (Vite) в client/dist
+    npm start                   # http://localhost:3001 (API + SPA из одного порта)
+
+## Демо-входы (пароль: demo123)
+member1 — курсант · verifier1/verifier2 — верификаторы отделов ·
+admin — администратор МКР · leadership — руководство · sysadmin — системный администратор · owner — владелец
+
+## Стек
+Node.js 20+, Express 5, better-sqlite3, JWT (httpOnly-cookie); React 18 + Vite 5.
+Структура: server/src/{engine.js, db/, middleware/, routes/}, client/src/{pages/, api.js, auth.jsx, ui.jsx}.
