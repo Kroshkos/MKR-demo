@@ -120,3 +120,10 @@ CREATE TABLE IF NOT EXISTS development_plans (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedBy INTEGER REFERENCES users(id)
 );
+
+-- Снимки рейтинга для расчёта динамики (место/балл) на дашборде МКР
+CREATE TABLE IF NOT EXISTS rating_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snap TEXT NOT NULL,                            -- JSON: {userId: {rank,total}}
+  ts TEXT NOT NULL DEFAULT (datetime('now'))
+);

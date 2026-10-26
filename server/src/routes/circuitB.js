@@ -120,8 +120,7 @@ module.exports = function (db) {
     const pending = db.prepare("SELECT COUNT(*) n FROM achievements WHERE verifyState IN ('submitted','in_review')").get().n;
     const approved = db.prepare("SELECT COUNT(*) n FROM achievements WHERE verifyState='approved'").get().n;
 
-    // Динамика: сравнение с предыдущим снимком рейтинга (таблица rating_snapshots)
-    db.prepare('CREATE TABLE IF NOT EXISTS rating_snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, snap TEXT NOT NULL, ts TEXT NOT NULL DEFAULT (datetime(\'now\')))');
+    // Динамика: сравнение с предыдущим снимком рейтинга (таблица rating_snapshots — в схеме)
     const prevSnapRow = db.prepare('SELECT snap FROM rating_snapshots ORDER BY id DESC LIMIT 1').get();
     const prev = prevSnapRow ? JSON.parse(prevSnapRow.snap) : null;
     const ranked = members.map(m => {
