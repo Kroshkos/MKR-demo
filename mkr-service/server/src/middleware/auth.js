@@ -4,6 +4,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const SECRET = process.env.JWT_SECRET || 'mkr-dev-secret-change-in-prod';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  // Amvera: задайте JWT_SECRET в «Конфигурация → Переменные». Dev-секрет публично известен в репозитории.
+  console.warn('[auth] ВНИМАНИЕ: NODE_ENV=production, но JWT_SECRET не задан — используется dev-секрет. Задайте JWT_SECRET в переменных окружения Amvera.');
+}
 
 function sign(user) {
   return jwt.sign({ id: user.id, role: user.role, login: user.login }, SECRET, { expiresIn: '8h' });

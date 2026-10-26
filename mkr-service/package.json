@@ -8,6 +8,7 @@
     "start": "node server/src/index.js",
     "dev": "concurrently -k -n api,web \"npm run start\" \"npm --prefix client run dev\"",
     "build": "npm --prefix client run build",
+    "postinstall": "npm --prefix client install --no-audit --no-fund && npm --prefix client run build",
     "test": "node server/test/engine.test.js"
   },
   "dependencies": {

@@ -6,23 +6,36 @@ const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const { computeScore, loadCoefs, loadThresholds } = require('../engine');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', '..', 'data', 'mkr.db');
+// Локально — ./server/data; на Amvera — постоянное хранилище /data (run.persistenceMount),
+// чтобы база не терялась при перезапуске/пересборке (см. docs.amvera.ru/applications/storage.html).
+const DEFAULT_DB_PATH = process.env.NODE_ENV === 'production'
+  ? path.join('/data', 'mkr.db')
+  : path.join(__dirname, '..', '..', 'data', 'mkr.db');
+const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
 
 function hash(pw) { return crypto.scryptSync(pw, 'mkr-salt', 32).toString('hex'); }
 
-function initDb() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new Database(DB_PATH);
+function initDb(dbPath = DB_PATH) {
+  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8'));
 
   const count = db.prepare('SELECT COUNT(*) n FROM users').get().n;
-  if (count === 0) seed(db);
+  if (count === 0) seed(db, { demo: process.env.SEED_DEMO !== 'false' });
   return db;
 }
 
-function seed(db) {
+/**
+ * Сидирование. Справочники (блоки, профили, отделы, коэффициенты, пороги, каталог)
+ * загружаются всегда — без них система не работает.
+ * Демо-данные (пользователи, достижения, резерв) — только при SEED_DEMO != 'false'.
+ * Для «чистого» продакшена на Amvera задайте переменную окружения SEED_DEMO=false
+ * и создайте пользователей через раздел Настройки → Пользователи.
+ */
+function seed(db, opts = {}) {
+  const demo = opts.demo !== false;
   // --- Справочники -----------------------------------------------------------
   const blocks = [
     [1, 'Учебная/Клиническая', 40], [2, 'Научная', 30], [3, 'Методическая', 18],
@@ -81,6 +94,11 @@ function seed(db) {
   ];
   const insCat = db.prepare('INSERT INTO catalog (blockCode,track,name,baseScore,defaultKp,defaultProfile,isThesis) VALUES (?,?,?,?,?,?,?)');
   catalog.forEach(c => insCat.run(...c));
+
+  if (!demo) {
+    console.log('[seed] Справочники загружены. Демо-данные пропущены (SEED_DEMO=false).');
+    return;
+  }
 
   // Пользователи: по одной учётной записи на роль + несколько курсантов
   const users = [
