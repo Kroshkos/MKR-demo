@@ -1,8 +1,6 @@
 node_modules/
-dist/
+client/dist/
 *.log
-server/data/*.db*
-mkr-service/server/data/*.db*
-mkr-service/client/dist/
-server.log
-server.log
+server/data/
+/data/
+.env

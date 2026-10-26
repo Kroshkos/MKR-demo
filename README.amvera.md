@@ -17,7 +17,7 @@ npm run dev          # API :3001 + vite dev :5173 (или npm start — всё �
 ## Деплой на Amvera Cloud (https://docs.amvera.ru)
 
 Проект настроен на деплои файлом **`amvera.yml`** (окружение `node`, toolchain `npm 20`).
-Загружать на Amvera нужно содержимое папки `mkr-service/` — там лежит `amvera.yml`.
+В репозитории `amvera.yml`, `package.json`, `Dockerfile` лежат в корне — Amvera подхватывает конфигурацию автоматически.
 
 ### Способ 1 — из git-репозитория (рекомендуется)
 1. https://amvera.ru → «Создать приложение» → «Из git-репозитория» (GitHub/GitLab или Amvera как основной репозиторий).
@@ -47,7 +47,7 @@ npm run dev          # API :3001 + vite dev :5173 (или npm start — всё �
 
 ## Структура
 ```
-mkr-service/
+
 ├── amvera.yml  Dockerfile  .dockerignore      # деплой
 ├── server/src/{index.js, engine.js, db/{schema.sql,seed.js}, middleware/auth.js, routes/*}
 ├── server/test/engine.test.js                 # npm test
