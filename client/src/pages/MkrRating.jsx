@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Stage } from '../ui.jsx';
+import { Stage, Skeleton, Toast } from '../ui.jsx';
 import { PassportView } from './MyPassport.jsx';
 
 const CAN_WRITE_ROLES = ['mkr_admin', 'owner'];
@@ -14,6 +14,7 @@ export default function MkrRating({ role }) {
   const [passport, setPassport] = useState(null);
   const [res, setRes] = useState({ stage: '', councilNote: '' });
   const [msg, setMsg] = useState('');
+  const [toast, setToast] = useState(null);
 
   useEffect(() => { api.get('/api/mkr/rating').then(setRows); }, []);
   useEffect(() => {
@@ -25,13 +26,19 @@ export default function MkrRating({ role }) {
     setMsg('');
     try {
       await api.post(`/api/mkr/reserve/${openId}`, { stage: res.stage, councilNote: res.councilNote });
-      setMsg('Решение Совета зафиксировано');
+      setToast({ kind: 'ok', msg: 'Решение Совета зафиксировано ✓' });
       const p = await api.get(`/api/mkr/passport/${openId}`); setPassport(p);
       const rs = await api.get('/api/mkr/rating'); setRows(rs);
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setToast({ kind: 'err', msg: e.message }); }
   };
 
-  if (!rows) return <p className="muted">Загрузка…</p>;
+  if (!rows) return (
+    <div className="cols">
+      <section className="card wide"><Skeleton h={24} w="30%" style={{ marginBottom: 16 }} />
+        {[...Array(5)].map((_, i) => <Skeleton key={i} h={38} style={{ marginBottom: 8 }} />)}</section>
+    </div>
+  );
+
   const filtered = rows.filter(x =>
     (stageF === 'все' || x.stage === stageF) &&
     (!q || x.fullName.toLowerCase().includes(q.toLowerCase()) || (x.track || '').toLowerCase().includes(q.toLowerCase())));
@@ -40,10 +47,10 @@ export default function MkrRating({ role }) {
     <div>
       <div className="toolbar">
         <h2>Сводный рейтинг · {filtered.length} из {rows.length}</h2>
-        <a className="btn ghost" href="/api/mkr/rating?format=csv" target="_blank" rel="noreferrer">Выгрузить CSV</a>
+        <a className="btn ghost" href="/api/mkr/rating?format=csv" target="_blank" rel="noreferrer">⬇ Выгрузить CSV</a>
       </div>
       <div className="filters">
-        <input style={{ maxWidth: 260 }} placeholder="Поиск по ФИО / треку…" value={q} onChange={e => setQ(e.target.value)} />
+        <input style={{ maxWidth: 280 }} placeholder="🔍 Поиск по ФИО / треку…" value={q} onChange={e => setQ(e.target.value)} />
         {['все', 'Участник', 'Кандидат', 'Резидент'].map(s => (
           <button key={s} className={`fchip ${stageF === s ? 'on' : ''}`} onClick={() => setStageF(s)}>{s}</button>
         ))}
@@ -53,13 +60,15 @@ export default function MkrRating({ role }) {
           <thead><tr><th>#</th><th>ФИО</th><th>Трек/курс</th><th>Баллы</th><th>Этап</th><th>ИУ</th><th>ИШ</th><th>Кг</th><th>Профиль</th><th /></tr></thead>
           <tbody>
             {filtered.map((x, i) => (
-              <tr key={x.userId} className={`${openId === x.userId ? 'active' : ''} ${i < 3 ? 'top3' : ''} clickable`}
+              <tr key={x.userId} className={`${openId === x.userId ? 'active' : ''} clickable`}
                   onClick={() => setOpenId(openId === x.userId ? null : x.userId)}>
-                <td>{i + 1}</td>
-                <td>{x.fullName}</td>
+                <td>{i < 3
+                  ? <span className={`medal m${i + 1}`}>{i + 1}</span>
+                  : <span className="muted">{i + 1}</span>}</td>
+                <td><b>{x.fullName}</b></td>
                 <td>{x.track} · {x.course} курс</td>
-                <td><b>{x.total}</b></td>
-                <td><Stage stage={x.stage} />{x.councilNote && <small className="muted"> ✎</small>}</td>
+                <td><b style={{ fontSize: 15 }}>{x.total}</b></td>
+                <td><Stage stage={x.stage} />{x.councilNote && <small className="muted" title={x.councilNote}> ✎</small>}</td>
                 <td>{x.iu}%</td><td>{x.ish}%</td><td>{x.kg}</td>
                 <td>{x.dominantProfile}</td>
                 <td><button className="btn small" onClick={(e) => { e.stopPropagation(); setOpenId(openId === x.userId ? null : x.userId); }}>
@@ -101,6 +110,7 @@ export default function MkrRating({ role }) {
           )}
         </section>
       )}
+      <Toast msg={toast?.msg} kind={toast?.kind} onClose={() => setToast(null)} />
     </div>
   );
 }

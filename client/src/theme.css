@@ -1,0 +1,295 @@
+/* ============================================================
+   МКР.ВМедА · тема v2 — «стекло и градиенты»
+   Design tokens, тёмная тема, анимации, modern UI primitives
+   ============================================================ */
+
+:root {
+  --brand-1: #0b3fa8;
+  --brand-2: #4f46e5;
+  --accent: #06b6d4;
+  --violet: #7c3aed;
+  --grad-brand: linear-gradient(120deg, var(--brand-1), var(--brand-2) 55%, #7c3aed);
+  --grad-accent: linear-gradient(120deg, #06b6d4, #3b82f6);
+  --grad-gold: linear-gradient(120deg, #f59e0b, #fbbf24);
+
+  --bg: #eef2fb;
+  --surface: rgba(255, 255, 255, .82);
+  --surface-solid: #ffffff;
+  --surface-2: #f4f7fd;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: rgba(15, 42, 82, .10);
+  --line-strong: rgba(15, 42, 82, .18);
+
+  --ok: #059669; --ok-bg: rgba(5, 150, 105, .10);
+  --warn: #b45309; --warn-bg: rgba(217, 119, 6, .10);
+  --err: #dc2626; --err-bg: rgba(220, 38, 38, .08);
+  --info: #2563eb; --info-bg: rgba(37, 99, 235, .10);
+
+  --r-sm: 10px; --r-md: 16px; --r-lg: 22px; --r-xl: 28px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .05);
+  --shadow-md: 0 8px 24px -8px rgba(15, 42, 82, .18);
+  --shadow-lg: 0 24px 48px -16px rgba(15, 42, 82, .28);
+  --glass-blur: saturate(160%) blur(14px);
+
+  --ease: cubic-bezier(.22, .8, .36, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #070b16;
+  --surface: rgba(20, 28, 48, .72);
+  --surface-solid: #111a2e;
+  --surface-2: #0d1526;
+  --ink: #e6ecf8;
+  --muted: #8ea0bf;
+  --line: rgba(148, 178, 255, .14);
+  --line-strong: rgba(148, 178, 255, .26);
+  --ok: #34d399; --ok-bg: rgba(52, 211, 153, .12);
+  --warn: #fbbf24; --warn-bg: rgba(251, 191, 36, .12);
+  --err: #f87171; --err-bg: rgba(248, 113, 113, .12);
+  --info: #60a5fa; --info-bg: rgba(96, 165, 250, .12);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 10px 30px -10px rgba(0, 0, 0, .6);
+  --shadow-lg: 0 30px 60px -20px rgba(0, 0, 0, .7);
+}
+
+/* ---------- фон приложения с мягкими «пятнами» ---------- */
+body { background: var(--bg); color: var(--ink); }
+.shell { position: relative; }
+.shell::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(600px 400px at 85% -5%, rgba(79, 70, 229, .16), transparent 60%),
+    radial-gradient(520px 380px at -10% 20%, rgba(6, 182, 212, .14), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(11, 63, 168, .10), transparent 60%);
+}
+[data-theme="dark"] .shell::before {
+  background:
+    radial-gradient(600px 400px at 85% -5%, rgba(99, 102, 241, .22), transparent 60%),
+    radial-gradient(520px 380px at -10% 20%, rgba(8, 145, 178, .18), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(30, 58, 138, .25), transparent 60%);
+}
+
+/* ---------- верхняя панель: стекло + градиентная черта ---------- */
+.topbar {
+  background: var(--surface); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--ink); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  padding: 12px clamp(16px, 3vw, 32px); gap: 18px;
+}
+.topbar::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--grad-brand); opacity: .9;
+}
+.brand { font-weight: 900; letter-spacing: -.3px; font-size: 21px; color: var(--ink); }
+.brand span { background: var(--grad-brand); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.topbar nav a {
+  color: var(--muted); padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 13.5px;
+  transition: all .25s var(--ease);
+}
+.topbar nav a:hover { color: var(--ink); background: var(--surface-2); transform: translateY(-1px); }
+.topbar nav a.active { color: #fff; background: var(--grad-brand); box-shadow: 0 6px 16px -6px rgba(79, 70, 229, .6); }
+.who { color: var(--ink); }
+.who small { color: var(--muted); }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--grad-brand); color: #fff; font-weight: 800; font-size: 14px; flex: none;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px rgba(79, 70, 229, .35);
+}
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink); cursor: pointer; display: grid; place-items: center;
+  font-size: 17px; transition: all .2s var(--ease); position: relative;
+}
+.icon-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
+.icon-btn:active { transform: translateY(0) scale(.96); }
+
+/* ---------- карточки: стекло, свечение, появление ---------- */
+.card {
+  background: var(--surface); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px;
+  box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+  transition: box-shadow .3s var(--ease), transform .3s var(--ease), border-color .3s;
+  animation: card-in .5s var(--ease) backwards;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.cols > .card:nth-child(2) { animation-delay: .06s; }
+.cols > .card:nth-child(3) { animation-delay: .12s; }
+.cols > .card:nth-child(4) { animation-delay: .18s; }
+@keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+h1, h2, h3 { color: var(--ink); letter-spacing: -.3px; }
+h2 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; margin-top: 0; }
+h2::before { content: ""; width: 8px; height: 8px; border-radius: 3px; background: var(--grad-brand); box-shadow: 0 0 8px rgba(79, 70, 229, .6); }
+
+/* ---------- hero-панель со стеклянными KPI ---------- */
+.hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.kpi {
+  border-radius: var(--r-lg); padding: 18px 20px; position: relative; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur); transition: transform .3s var(--ease), box-shadow .3s;
+  animation: card-in .5s var(--ease) backwards;
+}
+.kpi:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.kpi b { display: block; font-size: clamp(26px, 3.4vw, 36px); font-weight: 900; letter-spacing: -1px; line-height: 1.1; color: var(--ink); }
+.kpi span { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+.kpi::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--grad-brand); opacity: .85; }
+.kpi.c2::after { background: var(--grad-accent); }
+.kpi.c3::after { background: var(--grad-gold); }
+.kpi.c4::after { background: linear-gradient(120deg, #ec4899, #f43f5e); }
+.kpi .spark { position: absolute; right: 14px; bottom: 10px; font-size: 26px; opacity: .18; }
+
+/* ---------- кнопки / поля ---------- */
+.btn {
+  border-radius: 12px; font-weight: 700; padding: 10px 18px; border: 1px solid var(--line-strong);
+  background: var(--surface-solid); color: var(--ink); cursor: pointer;
+  transition: all .22s var(--ease); box-shadow: var(--shadow-sm);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: var(--brand-2); color: var(--brand-2); }
+.btn.primary {
+  background: var(--grad-brand); color: #fff; border: none;
+  box-shadow: 0 10px 24px -10px rgba(79, 70, 229, .65);
+}
+.btn.primary:hover { color: #fff; filter: brightness(1.08); box-shadow: 0 14px 30px -12px rgba(79, 70, 229, .8); }
+.btn.danger { border-color: var(--err); color: var(--err); }
+.btn.danger:hover { background: var(--err-bg); color: var(--err); }
+input, select, textarea {
+  background: var(--surface-solid); color: var(--ink); border: 1px solid var(--line-strong);
+  border-radius: 12px; padding: 10px 12px; transition: all .2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--brand-2);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, .18);
+}
+label { color: var(--muted); font-weight: 600; }
+
+/* ---------- таблицы ---------- */
+table { font-size: 14px; }
+th { color: var(--muted); border-bottom: 1px solid var(--line-strong); font-size: 11.5px; }
+td { border-bottom: 1px solid var(--line); color: var(--ink); }
+tbody tr { transition: background .15s; }
+tr.clickable:hover td { background: var(--surface-2); }
+tr.active td { background: var(--info-bg); }
+
+/* ---------- бейджи / статусы / чипы ---------- */
+.badge { border-radius: 999px; padding: 4px 11px; font-size: 11.5px; letter-spacing: .3px; box-shadow: var(--shadow-sm); }
+.pill-ok { background: var(--ok-bg); color: var(--ok); }
+.pill-warn { background: var(--warn-bg); color: var(--warn); }
+.pill-err { background: var(--err-bg); color: var(--err); }
+.pill-info { background: var(--info-bg); color: var(--info); }
+.fchip {
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface-solid); color: var(--muted);
+  font-weight: 600; transition: all .2s var(--ease);
+}
+.fchip:hover { border-color: var(--brand-2); color: var(--brand-2); transform: translateY(-1px); }
+.fchip.on { background: var(--grad-brand); color: #fff; border-color: transparent; box-shadow: 0 6px 14px -6px rgba(79, 70, 229, .7); }
+
+/* ---------- прогресс / бары ---------- */
+.bar { background: var(--surface-2); border: 1px solid var(--line); }
+.bar-fill { background: var(--grad-brand); box-shadow: 0 0 10px rgba(79, 70, 229, .45); transition: width .8s var(--ease); }
+
+/* ---------- кольцо прогресса этапа (SVG) ---------- */
+.ring-wrap { display: flex; align-items: center; gap: 16px; }
+.ring { position: relative; width: 120px; height: 120px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring .ring-bg { stroke: var(--surface-2); }
+.ring .ring-fg { stroke: url(#ringGrad); stroke-linecap: round; transition: stroke-dashoffset 1s var(--ease); }
+.ring-label { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-label b { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+.ring-label small { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+/* ---------- скелетоны загрузки ---------- */
+.skel { position: relative; overflow: hidden; background: var(--surface-2); border-radius: 12px; color: transparent !important; pointer-events: none; }
+.skel::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+  animation: shimmer 1.4s infinite;
+}
+[data-theme="dark"] .skel::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent); }
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* ---------- уведомления: glass-dropdown ---------- */
+.dropdown {
+  background: var(--surface); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+  color: var(--ink); animation: dd-in .28s var(--ease);
+}
+@keyframes dd-in { from { opacity: 0; transform: translateY(-8px) scale(.97); } }
+.dd-head { background: transparent; border-bottom: 1px solid var(--line); }
+.dd-item { border-bottom: 1px solid var(--line); transition: background .15s; }
+.dd-item:hover { background: var(--surface-2); }
+.dd-item.unread { background: var(--info-bg); }
+.dd-item b, .dd-item small { color: var(--ink); }
+.dd-item small { color: var(--muted); }
+.bell-ring { animation: ring 2.6s var(--ease) infinite; transform-origin: 50% 12%; display: inline-block; }
+@keyframes ring { 0%,12%,24% { transform: rotate(0); } 4%,8% { transform: rotate(14deg); } 6%,10% { transform: rotate(-12deg); } 16%,20% { transform: rotate(6deg); } 18% { transform: rotate(-4deg); } }
+.bell-dot { border: 2px solid var(--surface); box-shadow: 0 0 0 0 rgba(220, 38, 38, .5); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 70% { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0); } }
+
+/* ---------- тосты ---------- */
+.toast {
+  position: fixed; right: 22px; bottom: 22px; z-index: 60; max-width: 340px;
+  padding: 13px 18px; border-radius: var(--r-md); font-weight: 700; font-size: 14px;
+  box-shadow: var(--shadow-lg); animation: toast-in .35s var(--ease);
+  display: flex; gap: 10px; align-items: center; backdrop-filter: var(--glass-blur);
+}
+.toast.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+.toast.err { background: var(--err-bg); color: var(--err); border: 1px solid var(--err); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(.95); } }
+
+/* ---------- лента решений Совета ---------- */
+.feed { list-style: none; padding: 0; margin: 0; position: relative; }
+.feed::before { content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: var(--line-strong); }
+.feed li { position: relative; padding: 0 0 16px 30px; font-size: 13.5px; }
+.feed li::before {
+  content: ""; position: absolute; left: 3px; top: 4px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--grad-brand); box-shadow: 0 0 0 3px var(--bg);
+}
+.feed time { display: block; font-size: 11.5px; color: var(--muted); }
+
+/* ---------- медали топ-3 ---------- */
+.medal { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-weight: 900; color: #fff; font-size: 13px; box-shadow: var(--shadow-sm); }
+.medal.m1 { background: linear-gradient(135deg, #f59e0b, #fcd34d); }
+.medal.m2 { background: linear-gradient(135deg, #94a3b8, #cbd5e1); }
+.medal.m3 { background: linear-gradient(135deg, #b45309, #d97706); }
+
+/* ---------- страница входа ---------- */
+.login-wrap {
+  background:
+    radial-gradient(900px 600px at 80% -10%, rgba(79, 70, 229, .5), transparent 60%),
+    radial-gradient(700px 500px at 0% 100%, rgba(6, 182, 212, .35), transparent 60%),
+    linear-gradient(140deg, #060b1c, #0b1f4b 55%, #101a3d);
+}
+.login-wrap::before {
+  content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1.5px);
+  background-size: 26px 26px; animation: drift 30s linear infinite;
+}
+@keyframes drift { to { background-position: 260px 260px; } }
+.login {
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18);
+  backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-lg); padding: 30px; color: #e8eefc;
+  animation: card-in .6s var(--ease);
+}
+.login h1 { color: #fff; font-size: 30px; font-weight: 900; letter-spacing: -.5px; }
+.login h1 span { background: linear-gradient(120deg, #7dd3fc, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.login .muted { color: #b9c7e4; }
+.login input { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #fff; }
+.login input::placeholder { color: #9db1d8; }
+.login input:focus { border-color: #818cf8; box-shadow: 0 0 0 4px rgba(129, 140, 248, .3); }
+.login label { color: #c7d5ef; }
+.login .chip { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .2); color: #dbe6fa; }
+.login .chip:hover, .login .chip.on { background: var(--grad-brand); border-color: transparent; color: #fff; }
+.login .btn.primary { width: 100%; margin-top: 6px; }
+
+/* ---------- радар / паспорт ---------- */
+.radar polygon[stroke] { filter: drop-shadow(0 0 6px rgba(79, 70, 229, .5)); }
+.radar text { fill: var(--muted); font-weight: 600; }
+.big-score { background: var(--grad-brand); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 900; }
+.indices b { color: var(--brand-2); }
+.rec-item { background: var(--surface-2); border-color: var(--line); }
+.rec-item .rec-body { color: var(--muted); }
+footer { background: transparent; border-top: 1px solid var(--line); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

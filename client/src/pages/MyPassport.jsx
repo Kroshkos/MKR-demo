@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Stage, Radar, Bar, StageProgress } from '../ui.jsx';
+import { Stage, Radar, Bar, StageProgress, Skeleton } from '../ui.jsx';
 
 // Универсальный компонент паспорта: «мой паспорт» (member) и паспорт резервиста (контур Б).
 export function PassportView({ p, canEditPlan, canEditRecordRole, userId }) {
-  if (!p) return <p className="muted">Загрузка…</p>;
+  if (!p) return (<div className="cols">{[...Array(3)].map((_, i) => <section key={i} className="card"><Skeleton h={22} w="40%" style={{ marginBottom: 14 }} /><Skeleton h={14} /><Skeleton h={14} style={{ margin: "10px 0" }} /><Skeleton h={14} w="65%" /></section>)}<section className="card" style={{ minHeight: 340 }}><Skeleton h={300} r={16} /></section></div>);
   return (
     <div className="passport">
       <div className="card summary">
@@ -102,7 +102,7 @@ function PlanCard({ plan, canEdit, userId }) {
 export default function MyPassport() {
   const [p, setP] = useState(null);
   useEffect(() => { api.get('/api/me/passport').then(setP); }, []);
-  if (!p) return <p className="muted">Загрузка…</p>;
+  if (!p) return (<div className="cols">{[...Array(3)].map((_, i) => <section key={i} className="card"><Skeleton h={22} w="40%" style={{ marginBottom: 14 }} /><Skeleton h={14} /><Skeleton h={14} style={{ margin: "10px 0" }} /><Skeleton h={14} w="65%" /></section>)}<section className="card" style={{ minHeight: 340 }}><Skeleton h={300} r={16} /></section></div>);
   return (
     <div>
       <h2>Мой паспорт резервиста</h2>

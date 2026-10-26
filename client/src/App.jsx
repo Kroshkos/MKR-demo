@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './auth.jsx';
 import { NotificationsProvider } from './notifications.jsx';
-import { Layout } from './ui.jsx';
+import { Layout, ThemeProvider } from './ui.jsx';
 import Login from './pages/Login.jsx';
 import MyAchievements from './pages/MyAchievements.jsx';
 import MyPassport from './pages/MyPassport.jsx';
@@ -11,6 +11,7 @@ import MkrRating from './pages/MkrRating.jsx';
 import Admin from './pages/Admin.jsx';
 import AuditLog from './pages/AuditLog.jsx';
 import './styles.css';
+import './theme.css';
 
 // Мини-роутер на hash — без внешних зависимостей
 function useHashRoute() {
@@ -62,10 +63,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NotificationsProvider>
-        <Shell />
-      </NotificationsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationsProvider>
+          <Shell />
+        </NotificationsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

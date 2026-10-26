@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
+import { Stage, Skeleton } from '../ui.jsx';
+
 const LEVELS = ['межд', 'всеросс', 'регион', 'вуз'];
 const STATUSES = ['победитель', 'призёр', 'дипломант', 'участник'];
 
@@ -34,7 +36,7 @@ export default function VerifyQueue() {
     } catch (e) { setErr(e.message); }
   };
 
-  if (!rows) return <p className="muted">Загрузка…</p>;
+  if (!rows) return <div className="cols"><section className="card wide"><Skeleton h={24} w="30%" style={{marginBottom:16}} />{[...Array(4)].map((_,i)=><Skeleton key={i} h={44} style={{marginBottom:8}} />)}</section></div>;
   const shown = stateF === 'all' ? rows : rows.filter(a => a.verifyState === stateF);
   const nNew = rows.filter(a => a.verifyState === 'submitted').length;
   const nWork = rows.filter(a => a.verifyState === 'in_review').length;
