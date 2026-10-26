@@ -17,7 +17,10 @@ module.exports = function (db) {
       return res.status(401).json({ error: 'Неверный логин или пароль' });
     }
     const token = sign(u);
-    res.cookie('mkr_token', token, { httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000 });
+    res.cookie('mkr_token', token, {
+      httpOnly: true, sameSite: 'lax', maxAge: 8 * 3600 * 1000,
+      secure: process.env.NODE_ENV === 'production' || req.headers['x-forwarded-proto'] === 'https', // Amvera отдаёт HTTPS за прокси
+    });
     audit(db, u.login, 'login', 'users', u.id, { role: u.role });
     res.json({ id: u.id, fullName: u.fullName, role: u.role, departmentId: u.departmentId, track: u.track });
   });
