@@ -4,6 +4,7 @@ import { Stage } from '../ui.jsx';
 import { PassportView } from './MyPassport.jsx';
 
 const CAN_WRITE_ROLES = ['mkr_admin', 'owner'];
+const CAN_RECORDS_ROLES = ['leadership', 'owner']; // личное дело ведёт руководство факультета
 
 export default function MkrRating({ role }) {
   const [rows, setRows] = useState(null);
@@ -72,7 +73,8 @@ export default function MkrRating({ role }) {
       {openId != null && passport && (
         <section className="card open-passport">
           <h2>Паспорт: {passport.user.fullName}</h2>
-          <PassportView p={passport} canEditPlan={CAN_WRITE_ROLES.includes(role)} userId={openId} />
+          <PassportView p={passport} canEditPlan={CAN_WRITE_ROLES.includes(role)}
+                       canEditRecordRole={CAN_RECORDS_ROLES.includes(role)} userId={openId} />
           <h3>Зачтённые достижения</h3>
           <ul className="ach-list">
             {passport.achievements.map((a, i) => <li key={i}>{a.name} — {a.level}/{a.status} · <b>{a.score}</b> (блок {a.block})</li>)}

@@ -9,7 +9,7 @@ const STATE_BADGE = { draft: ['#9ca3af', 'Черновик'], submitted: ['#1d4e
 export default function MyAchievements() {
   const [data, setData] = useState(null);
   const [catalog, setCatalog] = useState([]);
-  const [form, setForm] = useState({ catalogId: '', level: 'вуз', status: 'участник', isTeam: false, eventDate: new Date().toISOString().slice(0, 10), docUrl: '' });
+  const [form, setForm] = useState({ catalogId: '', level: 'вуз', status: 'участник', isTeam: false, eventDate: new Date().toISOString().slice(0, 10), docName: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [filter, setFilter] = useState('all');
@@ -66,8 +66,8 @@ export default function MyAchievements() {
           <label>Дата мероприятия
             <input type="date" value={form.eventDate} onChange={e => setForm({ ...form, eventDate: e.target.value })} />
           </label>
-          <label>Ссылка на документ
-            <input placeholder="https://…" value={form.docUrl} onChange={e => setForm({ ...form, docUrl: e.target.value })} />
+          <label>Название документа (грамота, приказ и т.п.)
+            <input placeholder="Напр.: Грамота организаторов конференции" value={form.docName} onChange={e => setForm({ ...form, docName: e.target.value })} />
           </label>
         </div>
         <label className="check">
@@ -98,7 +98,7 @@ export default function MyAchievements() {
               const [color, label] = STATE_BADGE[a.verifyState] || ['#666', a.verifyState];
               return (
                 <tr key={a.id}>
-                  <td>{a.catalogName}{a.isTeam ? ' 👥' : ''}<br /><small className="muted">{a.eventDate}</small></td>
+                  <td>{a.catalogName}{a.isTeam ? ' 👥' : ''}<br /><small className="muted">{a.eventDate}{a.docName ? ` · 📎 ${a.docName}` : ''}</small></td>
                   <td>{a.blockName}</td>
                   <td>{a.level} / {a.status}</td>
                   <td><b>{a.computedScore}</b></td>

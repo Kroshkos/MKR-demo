@@ -105,3 +105,11 @@ tr.clickable { cursor:pointer; } tr.clickable:hover td { background:#f4f7fd; }
 .plan-goal.done span { text-decoration:line-through; color:#9ca3af; }
 .goal-edit-row { display:flex; gap:6px; margin:4px 0; } .goal-edit-row input { flex:1; }
 @media (max-width:700px){ .dropdown{width:calc(100vw - 24px)} }
+
+/* Личное дело (контур Б) */
+.rec-group { margin-top: 12px; }
+.rec-group h4 { margin: 0 0 6px; color: var(--navy, #1e3a8a); font-size: 14px; }
+.rec-item { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+  border-left: 3px solid #c7d2e3; padding: 6px 10px; margin-bottom: 6px; background: #f8fafc; border-radius: 0 8px 8px 0; }
+.rec-body { margin: 4px 0 0; font-size: 13px; color: #374151; white-space: pre-wrap; }
+.rec-form textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }

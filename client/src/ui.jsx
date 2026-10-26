@@ -105,7 +105,7 @@ export function Layout({ children }) {
         <nav>{nav.map(([to, t]) => <a key={to} href={`#${to}`}>{t}</a>)}</nav>
         <Bell />
         <div className="who">
-          <div><b>{user?.fullName}</b><br /><small>{ROLE_NAME[user?.role]}</small></div>
+          <div><b>{user?.role === 'member' ? `Обучающийся · №${user?.id}` : user?.fullName}</b><br /><small>{ROLE_NAME[user?.role]}</small></div>
           <button className="btn ghost" onClick={logout}>Выйти</button>
         </div>
       </header>

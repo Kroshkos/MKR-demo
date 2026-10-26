@@ -127,3 +127,20 @@ CREATE TABLE IF NOT EXISTS rating_snapshots (
   snap TEXT NOT NULL,                            -- JSON: {userId: {rank,total}}
   ts TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Личное дело (контур Б): характеристика, благодарности, взыскания, участия в мероприятиях.
+-- Заполняет руководство факультета (leadership/owner); учащийся эти записи не видит.
+CREATE TABLE IF NOT EXISTS personal_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL REFERENCES users(id),
+  kind TEXT NOT NULL CHECK (kind IN ('characteristic','gratitude','discipline','event_participation')),
+  title TEXT NOT NULL,
+  body TEXT,
+  eventDate TEXT,                                 -- ISO yyyy-mm-dd (дата документа/мероприятия)
+  authorId INTEGER REFERENCES users(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_pr_user ON personal_records(userId);
+-- Отображаемое имя документа-основания: учащийся видит только название, без ФИО и пути в хранилище.
+-- Колонка добавляется миграцией в db/index.js (ALTER TABLE несовместим с повторным применением схемы).

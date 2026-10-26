@@ -22,11 +22,13 @@ module.exports = function (db) {
       secure: process.env.NODE_ENV === 'production' || req.headers['x-forwarded-proto'] === 'https', // Amvera отдаёт HTTPS за прокси
     });
     audit(db, u.login, 'login', 'users', u.id, { role: u.role });
-    res.json({ id: u.id, fullName: u.fullName, role: u.role, departmentId: u.departmentId, track: u.track });
+    // В аккаунте обучающегося ФИО не отдаём (анонимный кабинет): только роль/подразделение/трек.
+    res.json({ id: u.id, fullName: u.role === 'member' ? null : u.fullName, role: u.role, departmentId: u.departmentId, track: u.track });
   });
 
   r.get('/me', auth, (req, res) => {
     const u = db.prepare('SELECT id, fullName, login, role, departmentId, track, course, profileMpmk, consentPd FROM users WHERE id=?').get(req.user.id);
+    if (u?.role === 'member') delete u.fullName; // анонимный аккаунт обучающегося — без ФИО
     res.json(u);
   });
 

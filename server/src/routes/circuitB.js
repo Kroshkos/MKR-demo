@@ -62,8 +62,61 @@ module.exports = function (db) {
     const reserve = db.prepare('SELECT r.*, au.fullName AS decidedBy FROM reserve r LEFT JOIN users au ON au.id=r.decidedBy WHERE r.userId=?').get(uid);
     const planRow = db.prepare('SELECT * FROM development_plans WHERE userId=?').get(uid);
     const plan = planRow ? { goals: JSON.parse(planRow.goals || '[]'), mentor: planRow.mentor, focus: planRow.focus, updatedAt: planRow.updatedAt } : null;
-    res.json({ user: u, ...p, radar, profileVectorNamed: vector, reserve, plan,
+    // Личное дело (контур Б): характеристика, благодарности, взыскания, участия в мероприятиях
+    const records = db.prepare(`SELECT pr.*, au.fullName AS authorName FROM personal_records pr
+                                LEFT JOIN users au ON au.id=pr.authorId
+                                WHERE pr.userId=? ORDER BY pr.kind, pr.eventDate DESC, pr.id DESC`).all(uid);
+    res.json({ user: u, ...p, radar, profileVectorNamed: vector, reserve, plan, records,
       achievements: items.map(i => ({ name: i.catalogName, block: i.blockCode, level: i.level, status: i.status, score: i.computedScore, date: i.eventDate })) });
+  });
+
+  // ---- Личное дело: CRUD-разделы (заполняет руководство факультета) ----------
+  const REC_KINDS = ['characteristic', 'gratitude', 'discipline', 'event_participation'];
+
+  r.get('/records/:userId', auth, READ, (req, res) => {
+    const uid = Number(req.params.userId);
+    const rows = db.prepare(`SELECT pr.*, au.fullName AS authorName FROM personal_records pr
+                             LEFT JOIN users au ON au.id=pr.authorId
+                             WHERE pr.userId=? ORDER BY pr.kind, pr.eventDate DESC, pr.id DESC`).all(uid);
+    res.json(rows);
+  });
+
+  r.post('/records/:userId', auth, requireRole('leadership', 'owner'), (req, res) => {
+    const uid = Number(req.params.userId);
+    const u = db.prepare("SELECT id, fullName FROM users WHERE id=? AND role='member'").get(uid);
+    if (!u) return res.status(404).json({ error: 'Обучающийся не найден' });
+    const { kind, title, body, eventDate } = req.body;
+    if (!REC_KINDS.includes(kind)) return res.status(400).json({ error: 'Некорректный раздел личного дела' });
+    if (!title || !String(title).trim()) return res.status(400).json({ error: 'Укажите название записи' });
+    if (eventDate && !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return res.status(400).json({ error: 'Дата в формате yyyy-mm-dd' });
+    const info = db.prepare('INSERT INTO personal_records (userId, kind, title, body, eventDate, authorId) VALUES (?,?,?,?,?,?)')
+      .run(uid, kind, String(title).slice(0, 200), body ? String(body).slice(0, 4000) : null, eventDate || null, req.user.id);
+    audit(db, req.user.login, 'record.add', 'personal_records', info.lastInsertRowid, { userId: uid, kind });
+    res.json({ ok: true, id: info.lastInsertRowid });
+  });
+
+  r.put('/records/:userId/:id', auth, requireRole('leadership', 'owner'), (req, res) => {
+    const uid = Number(req.params.userId);
+    const rec = db.prepare('SELECT * FROM personal_records WHERE id=? AND userId=?').get(Number(req.params.id), uid);
+    if (!rec) return res.status(404).json({ error: 'Запись не найдена' });
+    const { title, body, eventDate, kind } = req.body;
+    if (kind && !REC_KINDS.includes(kind)) return res.status(400).json({ error: 'Некорректный раздел' });
+    db.prepare(`UPDATE personal_records SET title=?, body=?, eventDate=?, kind=?, updatedAt=datetime('now') WHERE id=?`)
+      .run(title != null ? String(title).slice(0, 200) : rec.title,
+           body != null ? String(body).slice(0, 4000) : rec.body,
+           eventDate != null ? eventDate : rec.eventDate,
+           kind || rec.kind, rec.id);
+    audit(db, req.user.login, 'record.update', 'personal_records', rec.id, { userId: uid });
+    res.json({ ok: true });
+  });
+
+  r.delete('/records/:userId/:id', auth, requireRole('leadership', 'owner'), (req, res) => {
+    const uid = Number(req.params.userId);
+    const rec = db.prepare('SELECT * FROM personal_records WHERE id=? AND userId=?').get(Number(req.params.id), uid);
+    if (!rec) return res.status(404).json({ error: 'Запись не найдена' });
+    db.prepare('DELETE FROM personal_records WHERE id=?').run(rec.id);
+    audit(db, req.user.login, 'record.delete', 'personal_records', rec.id, { userId: uid, kind: rec.kind });
+    res.json({ ok: true });
   });
 
   // Фиксация решения Совета / этапа резерва (только запись в контур Б)

@@ -51,8 +51,13 @@ module.exports = function (db) {
   // Мои достижения (member — только свои, row-level) + прогресс до следующего этапа
   r.get('/me/achievements', auth, requireRole('member'), (req, res) => {
     const C = loadCoefs(db), T = loadThresholds(db);
+    // Безопасность контура А: учащийся НЕ видит ФИО в привязке к месту хранения документа
+    // и путь прикрепления docUrl — только отображаемое имя документа docName.
     const rows = db.prepare(`
-      SELECT a.*, c.name AS catalogName, c.baseScore, c.isThesis, b.name AS blockName
+      SELECT a.id, a.catalogId, a.blockCode, a.level, a.status, a.profileMpmk, a.kp, a.isTeam,
+             a.eventDate, a.docName, a.computedScore, a.verifyState, a.verifierComment,
+             a.createdAt, a.updatedAt,
+             c.name AS catalogName, c.baseScore, c.isThesis, b.name AS blockName
       FROM achievements a JOIN catalog c ON c.id=a.catalogId JOIN blocks b ON b.code=a.blockCode
       WHERE a.userId=? ORDER BY a.createdAt DESC`).all(req.user.id);
     const items = ratedItems(db, req.user.id, C, T);
@@ -78,14 +83,15 @@ module.exports = function (db) {
     const planRow = db.prepare('SELECT * FROM development_plans WHERE userId=?').get(req.user.id);
     const plan = planRow ? { goals: JSON.parse(planRow.goals || '[]'), mentor: planRow.mentor, focus: planRow.focus, updatedAt: planRow.updatedAt } : null;
     const reserve = db.prepare('SELECT stage, councilNote, decidedAt FROM reserve WHERE userId=?').get(req.user.id);
-    const u = db.prepare('SELECT fullName, track, course, profileMpmk FROM users WHERE id=?').get(req.user.id);
-    res.json({ user: u, ...p, radar, profileVectorNamed: vector, plan, reserveFixed: reserve || null,
+    // Анонимизация аккаунта обучающегося: без ФИО и без места прикрепления документов.
+    const u = db.prepare('SELECT track, course, profileMpmk FROM users WHERE id=?').get(req.user.id);
+    res.json({ user: u, anon: true, ...p, radar, profileVectorNamed: vector, plan, reserveFixed: reserve || null,
       achievements: items.map(i => ({ name: i.catalogName, block: i.blockCode, level: i.level, status: i.status, score: i.computedScore, date: i.eventDate })) });
   });
 
   // Подача достижения (создание или submit сразу)
   r.post('/achievements', auth, requireRole('member'), (req, res) => {
-    const { catalogId, level, status, profileMpmk, kp, isTeam, eventDate, docUrl, submit } = req.body;
+    const { catalogId, level, status, profileMpmk, kp, isTeam, eventDate, docName, docUrl, submit } = req.body;
     const cat = db.prepare('SELECT * FROM catalog WHERE id=?').get(catalogId);
     if (!cat) return res.status(400).json({ error: 'Позиция каталога не найдена' });
     if (!LEVELS.includes(level) || !STATUSES.includes(status)) return res.status(400).json({ error: 'Некорректный уровень/статус' });
@@ -95,11 +101,12 @@ module.exports = function (db) {
     const score = computeScore({ baseScore: cat.baseScore, level, status, kp: kp ?? cat.defaultKp, isTeam, blockCode: cat.blockCode }, loadCoefs(db));
     const st = submit ? 'submitted' : 'draft';
     const tx = db.transaction(() => {
+      // docUrl — служебное место прикрепления в защищённом хранилище: участнику не возвращается.
       const i = db.prepare(`INSERT INTO achievements
-        (userId, catalogId, blockCode, level, status, profileMpmk, kp, isTeam, eventDate, docUrl, computedScore, verifyState)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+        (userId, catalogId, blockCode, level, status, profileMpmk, kp, isTeam, eventDate, docName, docUrl, computedScore, verifyState)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(req.user.id, catalogId, cat.blockCode, level, status, profileMpmk ?? cat.defaultProfile,
-             kp ?? cat.defaultKp, isTeam ? 1 : 0, eventDate, docUrl || null, score, st);
+             kp ?? cat.defaultKp, isTeam ? 1 : 0, eventDate, docName ? String(docName).slice(0, 200) : null, docUrl || null, score, st);
       audit(db, req.user.login, 'achievement.create', 'achievement', i.lastInsertRowid, { level, status, score, st });
       if (submit) notifyVerifiersOfBlock(cat.blockCode, 'verify.new', 'Новая заявка на верификацию',
         `${req.user.fullName}: «${cat.name}» (~${score} б.)`, '#/verify');

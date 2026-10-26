@@ -3,7 +3,7 @@ import { api } from '../api';
 import { Stage, Radar, Bar, StageProgress } from '../ui.jsx';
 
 // Универсальный компонент паспорта: «мой паспорт» (member) и паспорт резервиста (контур Б).
-export function PassportView({ p, canEditPlan, userId }) {
+export function PassportView({ p, canEditPlan, canEditRecordRole, userId }) {
   if (!p) return <p className="muted">Загрузка…</p>;
   return (
     <div className="passport">
@@ -39,6 +39,7 @@ export function PassportView({ p, canEditPlan, userId }) {
         {!p.profileVector?.length && !p.profileVectorNamed?.length && <p className="muted">Нет зачтённых достижений.</p>}
       </div>
       <PlanCard plan={p.plan} canEdit={canEditPlan} userId={userId} />
+      {p.records !== undefined && <PersonalFile records={p.records} canEdit={canEditRecordRole} userId={userId} />}
     </div>
   );
 }
@@ -104,7 +105,8 @@ export default function MyPassport() {
   if (!p) return <p className="muted">Загрузка…</p>;
   return (
     <div>
-      <h2>Мой паспорт резервиста{p.user ? <> · {p.user.fullName}</> : null}</h2>
+      <h2>Мой паспорт резервиста</h2>
+      <p className="muted">Аккаунт обучающегося анонимен: ФИО и место прикрепления документов в кабинете не отображаются.</p>
       <PassportView p={p} />
       {p.achievements?.length > 0 && (
         <section className="card wide" style={{ marginTop: 14 }}>
@@ -113,6 +115,74 @@ export default function MyPassport() {
             {p.achievements.map((a, i) => <li key={i}>{a.name} — {a.level}/{a.status} · <b>{a.score}</b> (блок {a.block}, {a.date})</li>)}
           </ul>
         </section>
+      )}
+    </div>
+  );
+}
+
+
+// Личное дело (контур Б): характеристика, благодарности, взыскания, участия в мероприятиях.
+// Заполняет руководство факультета; в аккаунте обучающегося раздел не отображается.
+const REC_KINDS = [
+  ['characteristic', '📄 Характеристика'],
+  ['gratitude', '🏅 Благодарности'],
+  ['discipline', '⚠️ Взыскания'],
+  ['event_participation', '🎖️ Участия в мероприятиях'],
+];
+
+function PersonalFile({ records, canEdit, userId }) {
+  const [form, setForm] = useState({ kind: 'characteristic', title: '', body: '', eventDate: new Date().toISOString().slice(0, 10) });
+  const [msg, setMsg] = useState('');
+  const reload = () => api.get(`/api/mkr/records/${userId}`).then(setLocal);
+  const [local, setLocal] = useState(records);
+  useEffect(() => { setLocal(records); }, [records]);
+
+  const add = async () => {
+    setMsg('');
+    try {
+      await api.post(`/api/mkr/records/${userId}`, form);
+      setMsg('Запись добавлена'); setForm({ ...form, title: '', body: '' });
+      await reload();
+    } catch (e) { setMsg(e.message); }
+  };
+  const del = async (id) => {
+    try { await api.del(`/api/mkr/records/${userId}/${id}`); await reload(); } catch (e) { setMsg(e.message); }
+  };
+
+  return (
+    <div className="card wide" style={{ marginTop: 14 }}>
+      <h3>Личное дело</h3>
+      {!canEdit && !local?.length && <p className="muted">Разделы личного дела пока не заполнены руководством факультета.</p>}
+      {REC_KINDS.map(([kind, label]) => {
+        const items = (local || []).filter(x => x.kind === kind);
+        if (!items.length && !canEdit) return null;
+        return (
+          <div key={kind} className="rec-group">
+            <h4>{label}{items.length ? ` (${items.length})` : ''}</h4>
+            {items.map(rec => (
+              <div key={rec.id} className="rec-item">
+                <div><b>{rec.title}</b> <small className="muted">{rec.eventDate || ''}{rec.authorName ? ` · внес: ${rec.authorName}` : ''}</small></div>
+                {rec.body && <p className="rec-body">{rec.body}</p>}
+                {canEdit && <button className="btn small ghost" onClick={() => del(rec.id)}>Удалить</button>}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      {canEdit && (
+        <div className="rec-form">
+          <div className="row">
+            <label>Раздел
+              <select value={form.kind} onChange={e => setForm({ ...form, kind: e.target.value })}>
+                {REC_KINDS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+              </select>
+            </label>
+            <label className="grow">Название<input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Напр.: Благодарность начальника факультета" /></label>
+            <label>Дата<input type="date" value={form.eventDate} onChange={e => setForm({ ...form, eventDate: e.target.value })} /></label>
+          </div>
+          <label className="grow">Содержание<textarea rows="3" value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} /></label>
+          <div className="row"><button className="btn primary" disabled={!form.title.trim()} onClick={add}>Добавить запись</button>{msg && <span className="ok">{msg}</span>}</div>
+        </div>
       )}
     </div>
   );

@@ -22,6 +22,11 @@ function initDb(dbPath = DB_PATH) {
   db.pragma('foreign_keys = ON');
   db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8'));
 
+  // Миграции (идемпотентные): имя документа-основания для достижений.
+  // Учащийся видит только docName — без ФИО владельца и пути в защищённом хранилище (docUrl).
+  const achCols = db.prepare("PRAGMA table_info(achievements)").all().map(c => c.name);
+  if (!achCols.includes('docName')) db.exec("ALTER TABLE achievements ADD COLUMN docName TEXT");
+
   const count = db.prepare('SELECT COUNT(*) n FROM users').get().n;
   if (count === 0) seed(db, { demo: process.env.SEED_DEMO !== 'false' });
   return db;
@@ -171,6 +176,21 @@ function seed(db, opts = {}) {
     .run(1, 'Резидент', 'Решение Совета №14 от 15.09: включить в основной состав МКР', 9);
   db.prepare('INSERT INTO reserve (userId, stage, councilNote, decidedBy, decidedAt) VALUES (?,?,?,?,datetime(\'now\'))')
     .run(2, 'Кандидат', 'Решение Совета №15: испытательный период до конца семестра', 9);
+
+  // Личное дело (контур Б): характеристика, благодарности, взыскания, участия — заполняет руководство факультета
+  const insRec = db.prepare(`INSERT INTO personal_records (userId, kind, title, body, eventDate, authorId) VALUES (?,?,?,?,?,?)`);
+  insRec.run(1, 'characteristic', 'Характеристика на курсанта 3 курса',
+    'За время обучения проявил себя дисциплинированным, ответственным слушателем. Активно участвует в научной жизни кафедры хирургии. Рекомендован к включению в МКР.', dstr(0, 9, 1), 8);
+  insRec.run(1, 'gratitude', 'Благодарность начальника факультета',
+    'За организацию студенческой научной конференции и высокие результаты в учёбе.', dstr(0, 5, 9), 8);
+  insRec.run(1, 'event_participation', 'Дежурство в госпитале (шефская практика)',
+    'Участие в шефских дежурствах военного клинического госпиталя — 4 смены.', dstr(0, 4, 15), 8);
+  insRec.run(2, 'characteristic', 'Характеристика на курсанта 2 курса',
+    'Добросовестный, исполнительный. Проявляет интерес к терапевтическому профилю, участвует в работе кружка НИО.', dstr(0, 9, 3), 8);
+  insRec.run(2, 'discipline', 'Замечание по дисциплине',
+    'Нарушение расписания занятий (опоздание на лекцию) — беседа проведена, повторных нарушений нет.', dstr(0, 3, 12), 8);
+  insRec.run(2, 'event_participation', 'Спартакиада ВМедА',
+    'Участие в составе команды факультета по лёгкой атлетике.', dstr(0, 6, 20), 8);
 
   console.log('[seed] База данных заполнена справочниками и демо-данными.');
 }
