@@ -96,3 +96,34 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_ach_user ON achievements(userId);
 CREATE INDEX IF NOT EXISTS idx_ach_state ON achievements(verifyState);
 CREATE INDEX IF NOT EXISTS idx_ach_block ON achievements(blockCode, verifyState);
+
+-- Уведомления (колокола): event — системные события верификации, digest — еженедельная сводка рейтинга
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER NOT NULL REFERENCES users(id),
+  kind TEXT NOT NULL DEFAULT 'event',          -- event | digest
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  link TEXT,
+  readAt TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(userId, readAt);
+
+-- Личный профиль / план развития резервиста (контур Б, виден курсанту по его же паспорту)
+CREATE TABLE IF NOT EXISTS development_plans (
+  userId INTEGER PRIMARY KEY REFERENCES users(id),
+  goals TEXT NOT NULL DEFAULT '[]',             -- JSON: [{text, done}]
+  mentor TEXT,
+  focus TEXT,
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedBy INTEGER REFERENCES users(id)
+);
+
+-- Снимки рейтинга для расчёта динамики (место/балл) на дашборде МКР
+CREATE TABLE IF NOT EXISTS rating_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  snap TEXT NOT NULL,                            -- JSON: {userId: {rank,total}}
+  ts TEXT NOT NULL DEFAULT (datetime('now'))
+);

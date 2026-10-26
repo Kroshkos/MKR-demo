@@ -6,6 +6,7 @@ const STATUSES = ['победитель', 'призёр', 'дипломант', 
 
 export default function VerifyQueue() {
   const [rows, setRows] = useState(null);
+  const [stateF, setStateF] = useState('all');
   const [err, setErr] = useState('');
   const [sel, setSel] = useState(null); // выбранная заявка для решения
   const [dec, setDec] = useState({ decision: 'approve', comment: '', level: '', status: '', kp: '' });
@@ -34,16 +35,24 @@ export default function VerifyQueue() {
   };
 
   if (!rows) return <p className="muted">Загрузка…</p>;
+  const shown = stateF === 'all' ? rows : rows.filter(a => a.verifyState === stateF);
+  const nNew = rows.filter(a => a.verifyState === 'submitted').length;
+  const nWork = rows.filter(a => a.verifyState === 'in_review').length;
 
   return (
     <div className="cols">
       <section className="card wide">
         <h2>Очередь верификации · {rows.length} заявок</h2>
+        <div className="filters">
+          {[['all', `Все (${rows.length})`], ['submitted', `Новые (${nNew})`], ['in_review', `В работе (${nWork})`]].map(([v, t]) => (
+            <button key={v} className={`fchip ${stateF === v ? 'on' : ''}`} onClick={() => setStateF(v)}>{t}</button>
+          ))}
+        </div>
         {err && <div className="error">{err}</div>}
         <table>
           <thead><tr><th>Заявитель</th><th>Событие</th><th>Блок</th><th>Уровень/статус</th><th>Балл</th><th>Состояние</th><th /></tr></thead>
           <tbody>
-            {rows.map(a => (
+            {shown.map(a => (
               <tr key={a.id}>
                 <td>{a.applicant}</td>
                 <td>{a.catalogName}<br /><small className="muted">{a.eventDate} · {a.docUrl ? <a href={a.docUrl} target="_blank" rel="noreferrer">документ ↗</a> : 'без документа'}</small></td>
@@ -57,7 +66,7 @@ export default function VerifyQueue() {
                 </td>
               </tr>
             ))}
-            {!rows.length && <tr><td colSpan="7" className="muted">Очередь пуста — заявки по блокам вашего отдела обработаны.</td></tr>}
+            {!shown.length && <tr><td colSpan="7" className="muted">Очередь пуста — заявки по блокам вашего отдела обработаны.</td></tr>}
           </tbody>
         </table>
       </section>

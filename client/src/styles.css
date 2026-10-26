@@ -81,3 +81,27 @@ tr.active td { background:#eef4ff; }
 .dep { border-top:1px solid var(--line); padding:10px 0; }
 
 @media (max-width:700px){ .topbar{flex-wrap:wrap} .who{display:none} .passport{grid-template-columns:1fr} }
+
+/* --- v1.1: уведомления, прогресс этапа, фильтры, план развития --- */
+.bell-wrap { position:relative; }
+.bell { background:none; border:none; font-size:20px; cursor:pointer; position:relative; padding:6px; }
+.bell-dot { position:absolute; top:0; right:-2px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; border-radius:999px; padding:1px 5px; }
+.dropdown { position:absolute; right:0; top:44px; width:360px; max-height:420px; overflow:auto; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 30px rgba(15,42,82,.18); z-index:30; color:var(--txt); }
+.dd-head { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; }
+.dd-empty { padding:16px 14px; }
+.dd-item { display:flex; gap:10px; padding:10px 14px; border-bottom:1px solid #edf1f7; color:var(--txt); }
+.dd-item:hover { background:#f4f7fd; }
+.dd-item.unread { background:#eef4ff; }
+.dd-item b { display:block; font-size:13px; } .dd-item small { display:block; color:#4b5563; font-size:12px; }
+.dd-item em { display:block; color:#9ca3af; font-size:11px; font-style:normal; margin-top:2px; }
+.progress-wrap { margin-top:10px; }
+.filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.fchip { border:1px solid #c7d2e3; background:#fff; border-radius:999px; padding:5px 12px; font-size:13px; cursor:pointer; }
+.fchip.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+.top3 td:first-child { font-weight:800; color:var(--navy); }
+tr.clickable { cursor:pointer; } tr.clickable:hover td { background:#f4f7fd; }
+.delta-up { color:#0d7a3f; font-size:12px; font-weight:700; } .delta-down { color:#b91c1c; font-size:12px; font-weight:700; }
+.plan-goal { display:flex; align-items:center; gap:8px; font-size:13px; padding:4px 0; }
+.plan-goal.done span { text-decoration:line-through; color:#9ca3af; }
+.goal-edit-row { display:flex; gap:6px; margin:4px 0; } .goal-edit-row input { flex:1; }
+@media (max-width:700px){ .dropdown{width:calc(100vw - 24px)} }

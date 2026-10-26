@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { Stage } from '../ui.jsx';
+import { Stage, StageProgress } from '../ui.jsx';
 
 const LEVELS = [['межд', 'Международный'], ['всеросс', 'Всероссийский'], ['регион', 'Региональный'], ['вуз', 'Уровень вуза']];
 const STATUSES = [['победитель', 'Победитель'], ['призёр', 'Призёр'], ['дипломант', 'Дипломант'], ['участник', 'Участник']];
@@ -12,6 +12,7 @@ export default function MyAchievements() {
   const [form, setForm] = useState({ catalogId: '', level: 'вуз', status: 'участник', isTeam: false, eventDate: new Date().toISOString().slice(0, 10), docUrl: '' });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [filter, setFilter] = useState('all');
 
   const load = () => api.get('/api/me/achievements').then(setData);
   useEffect(() => {
@@ -36,6 +37,8 @@ export default function MyAchievements() {
 
   if (!data) return <p className="muted">Загрузка…</p>;
   const cat = catalog.find(c => String(c.id) === String(form.catalogId));
+  const shown = filter === 'all' ? data.achievements : data.achievements.filter(a => a.verifyState === filter);
+  const cnt = (st) => data.achievements.filter(a => a.verifyState === st).length;
 
   return (
     <div className="cols">
@@ -82,10 +85,16 @@ export default function MyAchievements() {
 
       <section className="card wide">
         <h2>Мои достижения · <Stage stage={data.myStage} /> · {data.myTotal} баллов</h2>
+        <StageProgress total={data.myTotal} stage={data.myStage} thresholds={data.thresholds} />
+        <div className="filters" style={{ marginTop: 10 }}>
+          {[['all','Все'], ['draft','Черновики'], ['submitted','На верификации'], ['approved','Зачтено'], ['revision','На доработку'], ['rejected','Отклонено']].map(([v,t]) => (
+            <button key={v} className={`fchip ${filter===v?'on':''}`} onClick={()=>setFilter(v)}>{t}{v!=='all'?` (${cnt(v)})`:''}</button>
+          ))}
+        </div>
         <table>
           <thead><tr><th>Событие</th><th>Блок</th><th>Уровень/статус</th><th>Балл</th><th>Состояние</th><th /></tr></thead>
           <tbody>
-            {data.achievements.map(a => {
+            {shown.map(a => {
               const [color, label] = STATE_BADGE[a.verifyState] || ['#666', a.verifyState];
               return (
                 <tr key={a.id}>
@@ -100,7 +109,7 @@ export default function MyAchievements() {
                 </tr>
               );
             })}
-            {!data.achievements.length && <tr><td colSpan="6" className="muted">Пока пусто — добавьте первое достижение.</td></tr>}
+            {!shown.length && <tr><td colSpan="6" className="muted">Пока пусто — добавьте первое достижение.</td></tr>}
           </tbody>
         </table>
       </section>

@@ -2,10 +2,40 @@
 /** Контур А — достижения курсантов и распределённая верификация профильными отделами. */
 const express = require('express');
 const { auth, requireRole, verifierBlocks, audit } = require('../middleware/auth');
-const { computeScore, loadCoefs, loadThresholds, ratedItems, buildPassport, LEVELS, STATUSES } = require('../engine');
+const { computeScore, loadCoefs, loadThresholds, ratedItems, buildPassport, stageFor, LEVELS, STATUSES } = require('../engine');
 
 module.exports = function (db) {
   const r = express.Router();
+
+  // Уведомления: свои (любая роль) + колокольчик
+  const notify = (userId, type, title, body, link, kind = 'event') => {
+    if (!userId) return;
+    db.prepare('INSERT INTO notifications (userId, kind, type, title, body, link) VALUES (?,?,?,?,?,?)')
+      .run(userId, kind, type, title, body || null, link || null);
+  };
+  const notifyVerifiersOfBlock = (blockCode, ...args) => {
+    const rows = db.prepare(`SELECT u.id FROM users u JOIN departments d ON d.id=u.departmentId
+                             WHERE u.role='verifier' AND d.blockCodes LIKE ?`).all(`%${blockCode}%`);
+    for (const v of rows) notify(v.id, ...args);
+  };
+
+  r.get('/notifications', auth, (req, res) => {
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const items = db.prepare('SELECT * FROM notifications WHERE userId=? ORDER BY id DESC LIMIT ?').all(req.user.id, limit);
+    const unread = db.prepare('SELECT COUNT(*) n FROM notifications WHERE userId=? AND readAt IS NULL').get(req.user.id).n;
+    res.json({ items, unread });
+  });
+
+  r.post('/notifications/read', auth, (req, res) => {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids : null;
+    if (ids && ids.length) {
+      db.prepare(`UPDATE notifications SET readAt=datetime('now') WHERE userId=? AND readAt IS NULL AND id IN (${ids.map(() => '?').join(',')})`)
+        .run(req.user.id, ...ids.map(Number));
+    } else {
+      db.prepare("UPDATE notifications SET readAt=datetime('now') WHERE userId=? AND readAt IS NULL").run(req.user.id);
+    }
+    res.json({ ok: true });
+  });
 
   // Справочник позиций каталога (автоподстановка база/Кп/профиль)
   r.get('/catalog', auth, (req, res) => {
@@ -18,7 +48,7 @@ module.exports = function (db) {
 
   r.get('/levels', auth, (req, res) => res.json({ levels: LEVELS, statuses: STATUSES }));
 
-  // Мои достижения (member — только свои, row-level)
+  // Мои достижения (member — только свои, row-level) + прогресс до следующего этапа
   r.get('/me/achievements', auth, requireRole('member'), (req, res) => {
     const C = loadCoefs(db), T = loadThresholds(db);
     const rows = db.prepare(`
@@ -27,14 +57,30 @@ module.exports = function (db) {
       WHERE a.userId=? ORDER BY a.createdAt DESC`).all(req.user.id);
     const items = ratedItems(db, req.user.id, C, T);
     const passport = buildPassport(items, C, T);
-    res.json({ achievements: rows, myTotal: passport.total, myStage: passport.stage });
+    res.json({ achievements: rows, myTotal: passport.total, myStage: passport.stage, thresholds: T });
   });
 
-  // Мой упрощённый паспорт (member видит только свой)
+  // Мой упрощённый паспорт (member видит только свой) + план развития и история этапов
   r.get('/me/passport', auth, requireRole('member'), (req, res) => {
     const C = loadCoefs(db), T = loadThresholds(db);
     const items = ratedItems(db, req.user.id, C, T);
-    res.json(buildPassport(items, C, T));
+    const p = buildPassport(items, C, T);
+    const blocks = db.prepare('SELECT code, name, ceiling FROM blocks ORDER BY code').all();
+    const profiles = db.prepare('SELECT code, name FROM profiles_mpmk').all();
+    const radar = blocks.map(b => {
+      const e = p.byBlock.find(x => x.block === b.code);
+      return { block: b.code, name: b.name, ceiling: b.ceiling, points: e ? e.points : 0, pct: e ? e.pct : 0 };
+    });
+    const vector = profiles.map(pr => {
+      const e = p.profileVector.find(x => x.profile === pr.code);
+      return { code: pr.code, name: pr.name, points: e ? e.points : 0, pct: e ? e.pct : 0 };
+    });
+    const planRow = db.prepare('SELECT * FROM development_plans WHERE userId=?').get(req.user.id);
+    const plan = planRow ? { goals: JSON.parse(planRow.goals || '[]'), mentor: planRow.mentor, focus: planRow.focus, updatedAt: planRow.updatedAt } : null;
+    const reserve = db.prepare('SELECT stage, councilNote, decidedAt FROM reserve WHERE userId=?').get(req.user.id);
+    const u = db.prepare('SELECT fullName, track, course, profileMpmk FROM users WHERE id=?').get(req.user.id);
+    res.json({ user: u, ...p, radar, profileVectorNamed: vector, plan, reserveFixed: reserve || null,
+      achievements: items.map(i => ({ name: i.catalogName, block: i.blockCode, level: i.level, status: i.status, score: i.computedScore, date: i.eventDate })) });
   });
 
   // Подача достижения (создание или submit сразу)
@@ -55,6 +101,8 @@ module.exports = function (db) {
         .run(req.user.id, catalogId, cat.blockCode, level, status, profileMpmk ?? cat.defaultProfile,
              kp ?? cat.defaultKp, isTeam ? 1 : 0, eventDate, docUrl || null, score, st);
       audit(db, req.user.login, 'achievement.create', 'achievement', i.lastInsertRowid, { level, status, score, st });
+      if (submit) notifyVerifiersOfBlock(cat.blockCode, 'verify.new', 'Новая заявка на верификацию',
+        `${req.user.fullName}: «${cat.name}» (~${score} б.)`, '#/verify');
       return i.lastInsertRowid;
     });
     res.status(201).json({ id: tx() });
@@ -67,6 +115,8 @@ module.exports = function (db) {
     if (!['draft', 'revision'].includes(a.verifyState)) return res.status(409).json({ error: 'Заявку нельзя отправить в текущем статусе' });
     db.prepare("UPDATE achievements SET verifyState='submitted', updatedAt=datetime('now') WHERE id=?").run(a.id);
     audit(db, req.user.login, 'achievement.submit', 'achievement', a.id);
+    notifyVerifiersOfBlock(a.blockCode, 'verify.new', 'Новая заявка на верификацию',
+      `${req.user.fullName}: «${db.prepare('SELECT name FROM catalog WHERE id=?').get(a.catalogId)?.name}» (~${a.computedScore} б.)`, '#/verify');
     res.json({ ok: true });
   });
 
@@ -119,6 +169,22 @@ module.exports = function (db) {
         .run(newState, req.user.id, comment || null, upd.level, upd.status, upd.kp, newScore, a.id);
       audit(db, req.user.login, 'verify.' + decision, 'achievement', a.id,
             { oldScore: a.computedScore, newScore, changed: (upd.level !== a.level || upd.status !== a.status || upd.kp !== a.kp) });
+      // Уведомление заявителю о решении + пересчёт этапа (повышение — отдельное уведомление)
+      const C = loadCoefs(db), T = loadThresholds(db);
+      const beforeStage = buildPassport(ratedItems(db, a.userId, C, T), C, T).stage;
+      let afterStage = beforeStage;
+      if (decision === 'approve') {
+        afterStage = stageFor(
+          ratedItems(db, a.userId, C, T).reduce((s, x) => s + x.computedScore, 0) - a.computedScore + newScore, T);
+      }
+      const titles = { approve: 'Достижение зачтено', reject: 'Заявка отклонена', revision: 'Заявка отправлена на доработку' };
+      notify(a.userId, 'verify.decision', titles[decision],
+        `«${db.prepare('SELECT name FROM catalog WHERE id=?').get(a.catalogId)?.name}»: ${newScore} б.` +
+        (comment ? `. Комментарий: ${comment}` : ''), '#/me');
+      if (decision === 'approve' && afterStage !== beforeStage) {
+        notify(a.userId, 'stage.up', `Новый этап: ${afterStage}`,
+          `Поздравляем! Ваш суммарный балл перевёл вас в статус «${afterStage}».`, '#/me/passport');
+      }
     });
     tx();
     res.json({ ok: true, state: newState, computedScore: newScore });

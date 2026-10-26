@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './auth.jsx';
+import { NotificationsProvider } from './notifications.jsx';
 import { Layout } from './ui.jsx';
 import Login from './pages/Login.jsx';
 import MyAchievements from './pages/MyAchievements.jsx';
@@ -62,7 +63,9 @@ function Shell() {
 export default function App() {
   return (
     <AuthProvider>
-      <Shell />
+      <NotificationsProvider>
+        <Shell />
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

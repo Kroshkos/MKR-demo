@@ -8,6 +8,11 @@ const { loadCoefs, loadThresholds, ratedItems, buildPassport } = require('../eng
 
 module.exports = function (db) {
   const r = express.Router();
+  const notify = (userId, type, title, body, link, kind = 'event') => {
+    if (!userId) return;
+    db.prepare('INSERT INTO notifications (userId, kind, type, title, body, link) VALUES (?,?,?,?,?,?)')
+      .run(userId, kind, type, title, body || null, link || null);
+  };
   const READ = requireRole('mkr_admin', 'leadership', 'owner');
   const WRITE = requireRole('mkr_admin', 'owner');
 
@@ -55,7 +60,9 @@ module.exports = function (db) {
       return { code: pr.code, name: pr.name, points: e ? e.points : 0, pct: e ? e.pct : 0 };
     });
     const reserve = db.prepare('SELECT r.*, au.fullName AS decidedBy FROM reserve r LEFT JOIN users au ON au.id=r.decidedBy WHERE r.userId=?').get(uid);
-    res.json({ user: u, ...p, radar, profileVectorNamed: vector, reserve,
+    const planRow = db.prepare('SELECT * FROM development_plans WHERE userId=?').get(uid);
+    const plan = planRow ? { goals: JSON.parse(planRow.goals || '[]'), mentor: planRow.mentor, focus: planRow.focus, updatedAt: planRow.updatedAt } : null;
+    res.json({ user: u, ...p, radar, profileVectorNamed: vector, reserve, plan,
       achievements: items.map(i => ({ name: i.catalogName, block: i.blockCode, level: i.level, status: i.status, score: i.computedScore, date: i.eventDate })) });
   });
 
@@ -66,11 +73,37 @@ module.exports = function (db) {
     if (!['Участник', 'Кандидат', 'Резидент'].includes(stage)) return res.status(400).json({ error: 'Некорректный этап' });
     const u = db.prepare('SELECT id FROM users WHERE id=? AND role=\'member\'').get(uid);
     if (!u) return res.status(404).json({ error: 'Обучающийся не найден' });
+    const oldStage = db.prepare('SELECT stage FROM reserve WHERE userId=?').get(uid)?.stage;
     db.prepare(`INSERT INTO reserve (userId, stage, councilNote, decidedBy, decidedAt) VALUES (?,?,?,?,datetime('now'))
                 ON CONFLICT(userId) DO UPDATE SET stage=excluded.stage, councilNote=excluded.councilNote,
                 decidedBy=excluded.decidedBy, decidedAt=excluded.decidedAt`)
       .run(uid, stage, councilNote || null, req.user.id);
     audit(db, req.user.login, 'reserve.decision', 'reserve', uid, { stage, councilNote });
+    notify(uid, 'council.decision', `Решение Совета МКР: этап «${stage}»`,
+      councilNote || 'Примечание не указано.', '#/me/passport');
+    if (oldStage && oldStage !== stage) {
+      notify(uid, 'stage.change', `Этап резерва изменён: ${oldStage} → ${stage}`,
+        'Зафиксировано решением Совета МКР.', '#/me/passport');
+    }
+    res.json({ ok: true });
+  });
+
+  // План развития резервиста (ведение — админ МКР/владелец; курсант видит его в своём паспорте)
+  r.put('/plan/:userId', auth, WRITE, (req, res) => {
+    const uid = Number(req.params.userId);
+    const u = db.prepare('SELECT id, fullName FROM users WHERE id=? AND role=\'member\'').get(uid);
+    if (!u) return res.status(404).json({ error: 'Обучающийся не найден' });
+    const { goals, mentor, focus } = req.body;
+    if (!Array.isArray(goals)) return res.status(400).json({ error: 'goals должен быть массивом' });
+    const clean = goals.slice(0, 20).map(g => ({ text: String(g.text || '').slice(0, 300), done: !!g.done }));
+    db.prepare(`INSERT INTO development_plans (userId, goals, mentor, focus, updatedAt, updatedBy)
+                VALUES (?,?,?,?,datetime('now'),?)
+                ON CONFLICT(userId) DO UPDATE SET goals=excluded.goals, mentor=excluded.mentor,
+                focus=excluded.focus, updatedAt=excluded.updatedAt, updatedBy=excluded.updatedBy`)
+      .run(uid, JSON.stringify(clean), mentor || null, focus || null, req.user.id);
+    audit(db, req.user.login, 'plan.update', 'development_plans', uid, { count: clean.length });
+    notify(uid, 'plan.update', 'Обновлён ваш план развития',
+      focus ? `Фокус: ${focus}.` : 'Наставник внес изменения в план целей.', '#/me/passport');
     res.json({ ok: true });
   });
 
@@ -86,7 +119,26 @@ module.exports = function (db) {
     }
     const pending = db.prepare("SELECT COUNT(*) n FROM achievements WHERE verifyState IN ('submitted','in_review')").get().n;
     const approved = db.prepare("SELECT COUNT(*) n FROM achievements WHERE verifyState='approved'").get().n;
-    res.json({ funnel, counters: { members: members.length, pendingVerifications: pending, approvedAchievements: approved } });
+
+    // Динамика: сравнение с предыдущим снимком рейтинга (таблица rating_snapshots — в схеме)
+    const prevSnapRow = db.prepare('SELECT snap FROM rating_snapshots ORDER BY id DESC LIMIT 1').get();
+    const prev = prevSnapRow ? JSON.parse(prevSnapRow.snap) : null;
+    const ranked = members.map(m => {
+      const p2 = buildPassport(ratedItems(db, m.id, C, T), C, T);
+      return { userId: m.id, total: p2.total };
+    }).sort((a, b) => b.total - a.total);
+    const curMap = Object.fromEntries(ranked.map((x, i) => [x.userId, { rank: i + 1, total: x.total }]));
+    db.prepare('INSERT INTO rating_snapshots (snap) VALUES (?)').run(JSON.stringify(curMap));
+    const dynamics = prev ? ranked.map(x => ({
+      userId: x.userId,
+      deltaRank: (prev[x.userId]?.rank ?? null) ? prev[x.userId].rank - curMap[x.userId].rank : null,
+      deltaScore: (prev[x.userId] != null) ? Math.round((x.total - prev[x.userId].total) * 10) / 10 : null,
+    })) : [];
+    const decisions = db.prepare(`SELECT r.userId, u.fullName, r.stage, r.councilNote, r.decidedAt, au.fullName AS decidedBy
+                                  FROM reserve r JOIN users u ON u.id=r.userId LEFT JOIN users au ON au.id=r.decidedBy
+                                  ORDER BY r.decidedAt DESC LIMIT 5`).all();
+    res.json({ funnel, counters: { members: members.length, pendingVerifications: pending, approvedAchievements: approved },
+      dynamics, hasBaseline: !!prev, decisions });
   });
 
   return r;
